@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #020204;
+  --foreground: #f4f4f5;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Тёмный «дизайнерский» фон: глубина, виньетка, сетка, акцентные пятна */
+.cb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 140% 90% at 50% -30%, rgba(255, 49, 49, 0.14), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 110% 8%, rgba(139, 30, 30, 0.18), transparent 55%),
+    radial-gradient(ellipse 45% 50% at -15% 30%, rgba(40, 15, 60, 0.12), transparent 50%),
+    radial-gradient(ellipse 55% 45% at 95% 92%, rgba(255, 49, 49, 0.06), transparent 55%),
+    linear-gradient(168deg, #030308 0%, #05040a 38%, #010102 72%, #020203 100%);
+}
+
+.cb-backdrop-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 95% 90% at 50% 42%,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 55%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+}
+
+.cb-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 78% 70% at 50% 38%, black 25%, transparent 78%);
+  opacity: 0.55;
+}
+
+.cb-backdrop::after {
+  content: "";
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: min(95vw, 780px);
+  height: min(95vw, 780px);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 49, 49, 0.09) 0%,
+    rgba(255, 49, 49, 0.03) 42%,
+    transparent 68%
+  );
+  filter: blur(48px);
+}
+
+.cb-backdrop-diagonal {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  background: linear-gradient(
+    125deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 48%,
+    transparent 56%
+  );
+}
+
+.cb-backdrop-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(88px);
+  opacity: 0.32;
+}
+
+.cb-backdrop-orb--a {
+  width: min(480px, 55vw);
+  height: min(480px, 55vw);
+  bottom: -12%;
+  right: -8%;
+  background: rgba(90, 12, 12, 0.65);
+}
+
+.cb-backdrop-orb--b {
+  width: min(360px, 42vw);
+  height: min(360px, 42vw);
+  top: 38%;
+  left: -12%;
+  background: rgba(255, 49, 49, 0.12);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

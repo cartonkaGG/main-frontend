@@ -1,0 +1,70 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
+import { apiBase, apiFetch } from "@/lib/api";
+
+export type LiveDrop = {
+  id: string;
+  user: string;
+  item: string;
+  rarity: string;
+  caseName: string;
+  image: string | null;
+  at: number;
+};
+
+const MAX_UI = 100;
+
+export function useLiveDrops() {
+  const [drops, setDrops] = useState<LiveDrop[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    (async () => {
+      const r = await apiFetch<{ drops: LiveDrop[] }>("/api/live-drops");
+      if (cancelled) return;
+      if (r.ok && r.data?.drops) setDrops(r.data.drops.slice(0, MAX_UI));
+
+      const { io } = await import("socket.io-client");
+      if (cancelled) return;
+      const s = io(apiBase, {
+        transports: ["websocket", "polling"],
+        autoConnect: true,
+      });
+      socketRef.current = s;
+      s.on("live-drop", (d: LiveDrop) => {
+        if (cancelled) return;
+        // Show new drops after 5–6 seconds, to make animation feel less abrupt.
+        const delayMs = 5000 + Math.floor(Math.random() * 1001);
+        const t = setTimeout(() => {
+          if (cancelled) return;
+          setDrops((prev) => [d, ...prev].slice(0, MAX_UI));
+        }, delayMs);
+        timeouts.push(t);
+      });
+      s.on("cases-updated", () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("cd-cases-updated"));
+        }
+      });
+      s.on("promos-updated", () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("cd-promos-updated"));
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      timeouts.forEach((t) => clearTimeout(t));
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
+  return drops;
+}
