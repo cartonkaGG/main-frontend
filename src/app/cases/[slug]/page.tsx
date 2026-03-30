@@ -25,6 +25,8 @@ type CaseInfo = {
   price: number;
   image: string | null;
   skinImage: string | null;
+  heroCaseImageScale?: number;
+  heroSkinImageScale?: number;
   accent: string;
   itemCount: number;
   items: RouletteItem[];
@@ -237,7 +239,10 @@ export default function CaseOpenPage() {
   const [batchLandIndices, setBatchLandIndices] = useState<number[] | null>(null);
   const [batchLandEpoch, setBatchLandEpoch] = useState(0);
   const [batchSpinSession, setBatchSpinSession] = useState(0);
+  const [batchFastOpening, setBatchFastOpening] = useState(false);
   const pendingBatchRef = useRef<BatchOpenResult | null>(null);
+  /** Останнє відкриття ×2+ було «Быстро» — «Ще раз» повторює той самий режим */
+  const batchLastOpenWasFastRef = useRef(false);
 
   const loadCase = useCallback(async () => {
     const r = await apiFetch<CaseInfo>(`/api/cases/${slug}`);
@@ -267,58 +272,85 @@ export default function CaseOpenPage() {
     setBatchApiWaiting(false);
     setBatchDrop(null);
     pendingBatchRef.current = null;
+    setBatchFastOpening(false);
   }, [slug]);
 
-  const openBatch = useCallback(async () => {
-    if (!getToken()) {
-      requestAuthModal(`/cases/${slug}?open=1`);
-      return;
-    }
-    const n = openMultiplier;
-    if (n < 2) return;
+  const runOpenBatch = useCallback(
+    async (animated: boolean) => {
+      if (!getToken()) {
+        requestAuthModal(`/cases/${slug}?open=1`);
+        return;
+      }
+      const n = openMultiplier;
+      if (n < 2) return;
 
-    setDrop(null);
-    setBatchDrop(null);
-    pendingBatchRef.current = null;
-    setBatchLandIndices(null);
-    setFastHeroMode(true);
-    setShowRoulette(false);
-    pendingRef.current = null;
-    setLandIndex(null);
-    setBatchSpinSession((s) => s + 1);
-    setBatchApiWaiting(true);
+      batchLastOpenWasFastRef.current = !animated;
 
-    const r = await apiFetch<OpenApiResponse>(`/api/cases/${slug}/open`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ count: n }),
-    });
-
-    setBatchApiWaiting(false);
-
-    if (!r.ok) {
-      setFastHeroMode(false);
+      setDrop(null);
+      setBatchDrop(null);
+      pendingBatchRef.current = null;
       setBatchLandIndices(null);
-      if (r.status === 401) return;
-      if (r.status === 429) return;
-      alert(r.error || "Ошибка");
-      return;
-    }
+      setFastHeroMode(true);
+      setShowRoulette(false);
+      pendingRef.current = null;
+      setLandIndex(null);
 
-    const data = r.data!;
-    if (isBatchResponse(data)) {
-      pendingBatchRef.current = {
-        results: data.results,
-        newBalance: data.newBalance,
-        count: data.count,
-      };
-      setBatchLandIndices(data.results.map((x) => x.winIndex));
-      setBatchLandEpoch((e) => e + 1);
-    }
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("cd-balance-updated"));
-    }
-  }, [slug, openMultiplier]);
+      if (animated) {
+        setBatchFastOpening(false);
+        setBatchSpinSession((s) => s + 1);
+      } else {
+        setBatchFastOpening(true);
+      }
+
+      setBatchApiWaiting(true);
+
+      const r = await apiFetch<OpenApiResponse>(`/api/cases/${slug}/open`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: n }),
+      });
+
+      setBatchApiWaiting(false);
+
+      if (!r.ok) {
+        setFastHeroMode(false);
+        setBatchLandIndices(null);
+        setBatchFastOpening(false);
+        if (r.status === 401) return;
+        if (r.status === 429) return;
+        alert(r.error || "Ошибка");
+        return;
+      }
+
+      const data = r.data!;
+      if (isBatchResponse(data)) {
+        if (animated) {
+          pendingBatchRef.current = {
+            results: data.results,
+            newBalance: data.newBalance,
+            count: data.count,
+          };
+          setBatchLandIndices(data.results.map((x) => x.winIndex));
+          setBatchLandEpoch((e) => e + 1);
+        } else {
+          setBatchFastOpening(false);
+          setBatchDrop({
+            results: data.results,
+            newBalance: data.newBalance,
+            count: data.count,
+          });
+        }
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("cd-balance-updated"));
+      }
+    },
+    [slug, openMultiplier],
+  );
+
+  const openBatch = useCallback(() => runOpenBatch(true), [runOpenBatch]);
+
+  const openBatchFast = useCallback(() => runOpenBatch(false), [runOpenBatch]);
 
   const openCase = useCallback(async () => {
     if (!getToken()) {
@@ -334,6 +366,7 @@ export default function CaseOpenPage() {
     pendingBatchRef.current = null;
     setBatchLandIndices(null);
     setBatchApiWaiting(false);
+    setBatchFastOpening(false);
     setDrop(null);
     setShowRoulette(true);
     pendingRef.current = null;
@@ -361,13 +394,17 @@ export default function CaseOpenPage() {
     }
   }, [slug, openMultiplier, openBatch]);
 
+  const openBatchAgain = useCallback(() => {
+    void (batchLastOpenWasFastRef.current ? openBatchFast() : openBatch());
+  }, [openBatch, openBatchFast]);
+
   const openCaseFast = useCallback(async () => {
     if (!getToken()) {
       requestAuthModal(`/cases/${slug}?open=1`);
       return;
     }
     if (openMultiplier > 1) {
-      await openBatch();
+      await openBatchFast();
       return;
     }
     setFastHeroMode(true);
@@ -375,6 +412,7 @@ export default function CaseOpenPage() {
     pendingBatchRef.current = null;
     setBatchLandIndices(null);
     setBatchApiWaiting(false);
+    setBatchFastOpening(false);
     setDrop(null);
     setShowRoulette(false);
     pendingRef.current = null;
@@ -399,7 +437,7 @@ export default function CaseOpenPage() {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("cd-balance-updated"));
     }
-  }, [slug, openMultiplier, openBatch]);
+  }, [slug, openMultiplier, openBatchFast]);
 
   const handleSellBatchItem = useCallback(async (itemId: string) => {
     const r = await apiFetch<{ newBalance: number }>("/api/inventory/sell", {
@@ -417,6 +455,7 @@ export default function CaseOpenPage() {
       const results = prev.results.filter((x) => x.item.itemId !== itemId);
       if (results.length === 0) {
         setFastHeroMode(false);
+        setBatchFastOpening(false);
         return null;
       }
       return { ...prev, results, newBalance: nb };
@@ -466,7 +505,9 @@ export default function CaseOpenPage() {
     spinWaiting ||
     (landIndex !== null && !drop && showRoulette) ||
     batchAnimating;
-  const showBatchRouletteSection = batchAnimating;
+  const showBatchRouletteSection = batchAnimating && !batchFastOpening;
+  const showBatchFastLoadingHero =
+    batchFastOpening && batchApiWaiting && openMultiplier > 1;
   const showBatchResultCards = Boolean(batchDrop);
   const totalOpenPrice = c ? c.price * openMultiplier : 0;
 
@@ -488,6 +529,7 @@ export default function CaseOpenPage() {
       }
       setBatchDrop(null);
       setFastHeroMode(false);
+      setBatchFastOpening(false);
       router.refresh();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("cd-balance-updated"));
@@ -498,6 +540,9 @@ export default function CaseOpenPage() {
   }, [batchDrop, router, sellAllBusy]);
 
   if (!slug) return null;
+
+  const heroCaseS = (c?.heroCaseImageScale ?? 100) / 100;
+  const heroSkinS = (c?.heroSkinImageScale ?? 100) / 100;
 
   return (
     <SiteShell>
@@ -532,6 +577,13 @@ export default function CaseOpenPage() {
                     rows={batchDrop?.results ?? null}
                     onSellItem={handleSellBatchItem}
                   />
+                ) : showBatchFastLoadingHero ? (
+                  <BatchDropHero
+                    loading
+                    count={openMultiplier}
+                    rows={null}
+                    onSellItem={handleSellBatchItem}
+                  />
                 ) : fastHeroMode &&
                   !showBatchRouletteSection &&
                   !showBatchResultCards ? (
@@ -541,14 +593,17 @@ export default function CaseOpenPage() {
                     <div className="relative h-full min-h-[200px] w-full overflow-visible sm:min-h-[240px]">
                       {c.image ? (
                         <div className="pointer-events-none absolute -inset-[6%] z-[1] flex translate-y-5 items-end justify-center sm:-inset-[5%] sm:translate-y-6">
-                          <div className="relative h-[106%] w-[116%] max-w-none sm:h-[110%] sm:w-[120%]">
+                          <div
+                            className="relative h-[106%] w-[116%] max-w-none origin-bottom sm:h-[110%] sm:w-[120%]"
+                            style={{ transform: `translateZ(0) scale(${heroCaseS})` }}
+                          >
                             <Image
                               src={c.image}
                               alt=""
                               fill
                               sizes="(max-width: 640px) 96vw, 360px"
                               quality={100}
-                              className="object-contain object-bottom [transform:translateZ(0)] origin-bottom scale-[1.22] drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)] sm:scale-[1.28]"
+                              className="object-contain object-bottom origin-bottom scale-[1.22] drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)] sm:scale-[1.28]"
                               priority
                               unoptimized
                             />
@@ -557,17 +612,22 @@ export default function CaseOpenPage() {
                       ) : null}
                       {c.skinImage ? (
                         <div className="pointer-events-none absolute inset-0 z-20 flex -translate-y-4 items-center justify-center p-[8%] sm:-translate-y-6">
-                          <div className="relative h-full max-h-[68%] w-full max-w-[72%] sm:max-h-[70%] sm:max-w-[74%] cb-case-skin-float">
-                            <Image
-                              src={c.skinImage}
-                              alt=""
-                              fill
-                              sizes="(max-width: 640px) 70vw, 280px"
-                              quality={100}
-                              className="object-contain [transform:translateZ(0)] drop-shadow-[0_0_28px_rgba(255,255,255,0.12)]"
-                              priority
-                              unoptimized
-                            />
+                          <div
+                            className="relative h-full max-h-[68%] w-full max-w-[72%] origin-center sm:max-h-[70%] sm:max-w-[74%]"
+                            style={{ transform: `translateZ(0) scale(${heroSkinS})` }}
+                          >
+                            <div className="cb-case-skin-float relative h-full w-full">
+                              <Image
+                                src={c.skinImage}
+                                alt=""
+                                fill
+                                sizes="(max-width: 640px) 70vw, 280px"
+                                quality={100}
+                                className="object-contain drop-shadow-[0_0_28px_rgba(255,255,255,0.12)]"
+                                priority
+                                unoptimized
+                              />
+                            </div>
                           </div>
                         </div>
                       ) : null}
@@ -660,7 +720,7 @@ export default function CaseOpenPage() {
                             onClick={() => {
                               void (
                                 openMultiplier > 1
-                                  ? openBatch()
+                                  ? openBatchAgain()
                                   : fastHeroMode
                                     ? openCaseFast()
                                     : openCase()
@@ -738,7 +798,7 @@ export default function CaseOpenPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              void (openMultiplier > 1 ? openBatch() : openCaseFast());
+                              void (openMultiplier > 1 ? openBatchAgain() : openCaseFast());
                             }}
                             className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500/85 bg-transparent px-4 py-3 text-sm font-bold text-amber-400 transition hover:border-amber-400 hover:bg-amber-500/10 sm:px-5"
                           >
@@ -752,6 +812,7 @@ export default function CaseOpenPage() {
                             onClick={() => {
                               setBatchDrop(null);
                               setFastHeroMode(false);
+                              setBatchFastOpening(false);
                               router.refresh();
                             }}
                             className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-600 bg-zinc-800/90 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 sm:px-5"
@@ -799,7 +860,11 @@ export default function CaseOpenPage() {
                         void openCaseFast();
                       }}
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/55 bg-gradient-to-r from-amber-600/25 to-yellow-600/20 py-3.5 text-sm font-bold text-amber-200 shadow-md shadow-amber-950/20 transition hover:border-amber-400/70 hover:brightness-110 disabled:opacity-45 sm:flex-none sm:px-8"
-                      title="Без анимации рулетки, сразу результат"
+                      title={
+                        openMultiplier > 1
+                          ? "Без вертикальной рулетки — сразу все выпавшие предметы"
+                          : "Без анимации рулетки, сразу результат"
+                      }
                     >
                       <span aria-hidden>⚡</span>
                       {spinWaiting

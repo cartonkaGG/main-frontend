@@ -43,6 +43,10 @@ export type AdminCaseFull = {
   image: string;
   /** Картинка предмета поверх коробки (PNG з прозорістю), опціонально */
   skinImage: string;
+  /** Масштаб коробки на сторінці відкриття, % (40–180), 100 = дефолт */
+  heroCaseImageScale?: number;
+  /** Масштаб PNG скіна над кейсом, % */
+  heroSkinImageScale?: number;
   category: string;
   featured: boolean;
   accent: string;

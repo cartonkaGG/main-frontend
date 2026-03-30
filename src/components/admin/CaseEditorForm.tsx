@@ -40,6 +40,12 @@ export function CaseEditorForm({ mode, initial }: Props) {
   const [price, setPrice] = useState(String(initial?.price ?? 0));
   const [image, setImage] = useState(initial?.image || "");
   const [skinImage, setSkinImage] = useState(initial?.skinImage || "");
+  const [heroCaseImageScale, setHeroCaseImageScale] = useState(
+    String(initial?.heroCaseImageScale ?? 100),
+  );
+  const [heroSkinImageScale, setHeroSkinImageScale] = useState(
+    String(initial?.heroSkinImageScale ?? 100),
+  );
   const [category, setCategory] = useState(initial?.category || "popular");
   const [featured, setFeatured] = useState(Boolean(initial?.featured));
   const [accent, setAccent] = useState(initial?.accent || "amber");
@@ -58,18 +64,34 @@ export function CaseEditorForm({ mode, initial }: Props) {
       weight: Math.max(1, Math.floor(Number(it.weight)) || 1),
       image: (it.image || "").trim(),
     }));
+    const hCase = Math.min(180, Math.max(40, Math.round(Number(heroCaseImageScale) || 100)));
+    const hSkin = Math.min(180, Math.max(40, Math.round(Number(heroSkinImageScale) || 100)));
     return {
       slug: slug.trim().toLowerCase(),
       name: name.trim(),
       price: Number.isFinite(p) ? p : 0,
       image: image.trim(),
       skinImage: skinImage.trim(),
+      heroCaseImageScale: hCase,
+      heroSkinImageScale: hSkin,
       category: category.trim() || "popular",
       featured,
       accent: ACCENT_KEYS.includes(accent) ? accent : "amber",
       items: rawItems.filter((it) => it.name.length > 0),
     };
-  }, [slug, name, price, image, skinImage, category, featured, accent, items]);
+  }, [
+    slug,
+    name,
+    price,
+    image,
+    skinImage,
+    heroCaseImageScale,
+    heroSkinImageScale,
+    category,
+    featured,
+    accent,
+    items,
+  ]);
 
   async function save() {
     setErr(null);
@@ -111,6 +133,8 @@ export function CaseEditorForm({ mode, initial }: Props) {
         price: saveBody.price,
         image: saveBody.image,
         skinImage: saveBody.skinImage,
+        heroCaseImageScale: saveBody.heroCaseImageScale,
+        heroSkinImageScale: saveBody.heroSkinImageScale,
         category: saveBody.category,
         featured: saveBody.featured,
         accent: saveBody.accent,
@@ -242,6 +266,36 @@ export function CaseEditorForm({ mode, initial }: Props) {
             className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
             placeholder="https://… оружие / предмет поверх коробки"
           />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            Размер изображения коробки на странице кейса (%)
+          </span>
+          <input
+            type="number"
+            min={40}
+            max={180}
+            value={heroCaseImageScale}
+            onChange={(e) => setHeroCaseImageScale(e.target.value)}
+            className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+          />
+          <span className="text-[10px] text-zinc-500">
+            100 — по умолчанию; ниже — меньше коробка, выше — крупнее.
+          </span>
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+            Размер PNG скина над кейсом (%)
+          </span>
+          <input
+            type="number"
+            min={40}
+            max={180}
+            value={heroSkinImageScale}
+            onChange={(e) => setHeroSkinImageScale(e.target.value)}
+            className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+          />
+          <span className="text-[10px] text-zinc-500">100 — стандартный масштаб предмета поверх коробки.</span>
         </label>
         <label className="flex items-center gap-2">
           <input
