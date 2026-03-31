@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { normRarity, rarityCardFill } from "@/components/CaseRoulette";
 import { SiteShell } from "@/components/SiteShell";
 import { apiFetch, getToken } from "@/lib/api";
@@ -86,7 +86,7 @@ function pickTargetNearPrice(catalog: CatalogItem[], inputSum: number, targetPri
   return best.id;
 }
 
-/** Коло: довжина дуги = 2πr — червоний сегмент = рівно chancePct% окружності. */
+/** Коло: червоний сегмент = показаний шанс (номінал). */
 const GAUGE_R = 36;
 const GAUGE_C = 2 * Math.PI * GAUGE_R;
 
@@ -94,14 +94,34 @@ const GAUGE_C = 2 * Math.PI * GAUGE_R;
 const UPGRADE_SPIN_DURATION_MS = 6500;
 const UPGRADE_SPIN_DURATION_SEC = UPGRADE_SPIN_DURATION_MS / 1000;
 
+/**
+ * Сервер: win ⟺ roll < pWin. На колі червона займає перші nominalN оберту (0…nominalN).
+ * Кут стрілки такий, що вона в червоному сегменті ⟺ виграш, і рівномірно в межах сегмента/між сегментами.
+ */
+function rollToGaugeLandDegrees(roll: number, pWin: number, nominalN: number): number {
+  const p = Math.min(1, Math.max(0, pWin));
+  const n = Math.min(1, Math.max(0, nominalN));
+  if (roll < p) {
+    if (p <= 0) return 0;
+    return (roll / p) * n * 360;
+  }
+  if (p >= 1) return n * 360;
+  const u = (roll - p) / (1 - p);
+  return (n + u * (1 - n)) * 360;
+}
+
 function UpgradeGauge({
-  chancePct,
+  effectiveChancePct,
+  displayChancePct,
   roll,
   spinning,
   spinKey,
   done,
 }: {
-  chancePct: number;
+  /** pWin після RTP/лімітів — для відповідності roll ↔ виграш */
+  effectiveChancePct: number;
+  /** Показаний шанс — довжина червоної дуги й підпис */
+  displayChancePct: number;
   roll: number | null;
   spinning: boolean;
   spinKey: number;
@@ -110,9 +130,11 @@ function UpgradeGauge({
   const uid = useId().replace(/:/g, "");
   const gradId = `ug-grad-${uid}`;
   const glowId = `ug-glow-${uid}`;
-  const p = Math.min(100, Math.max(0, chancePct)) / 100;
-  const progressLen = p * GAUGE_C;
-  const land = roll == null ? 0 : roll * 360;
+  const pWin = Math.min(100, Math.max(0, effectiveChancePct)) / 100;
+  const n = Math.min(100, Math.max(0, displayChancePct)) / 100;
+  const progressLen = n * GAUGE_C;
+  const land =
+    roll == null ? 0 : rollToGaugeLandDegrees(roll, pWin, n);
   const targetRot = 4 * 360 + land;
   const [rot, setRot] = useState(0);
 
@@ -205,7 +227,7 @@ function UpgradeGauge({
               Шанс
             </span>
             <span className="font-mono text-base font-black tabular-nums text-cb-flame sm:text-lg">
-              {chancePct.toFixed(2)}%
+              {displayChancePct.toFixed(2)}%
             </span>
           </div>
         </div>
@@ -213,22 +235,21 @@ function UpgradeGauge({
 
       {/* Дублюємо прогрес лінійно — найкраще видно заповнення */}
       <div className="mt-4 w-full max-w-[280px] px-0.5 sm:max-w-[300px]">
-        <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-zinc-500">
-          <span>Шанс випадіння</span>
-          <span className="font-mono font-semibold text-cb-flame tabular-nums">{chancePct.toFixed(2)}%</span>
+        <div className="mb-1 text-[10px] text-zinc-500">
+          <span>Зона виграшу</span>
         </div>
         <div
           className="relative h-4 w-full overflow-hidden rounded-full border border-cb-stroke/70 bg-zinc-950/95 shadow-inner"
           role="progressbar"
-          aria-valuenow={Math.round(p * 1000) / 10}
+          aria-valuenow={Math.round(Math.min(100, Math.max(0, displayChancePct)) * 10) / 10}
           aria-valuemin={0}
           aria-valuemax={100}
         >
           <div
             className="h-full rounded-full bg-gradient-to-r from-red-950 via-red-500 to-amber-400 shadow-[0_0_12px_rgba(239,68,68,0.45)] transition-[width] duration-500 ease-out"
-            style={{ width: `${p * 100}%` }}
+            style={{ width: `${n * 100}%` }}
           />
-          {p >= 0.12 ? (
+          {n >= 0.12 ? (
             <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-wide text-white/90 drop-shadow-md">
               зона виграшу
             </span>
@@ -238,7 +259,7 @@ function UpgradeGauge({
 
       {done && roll != null ? (
         <p className="mt-3 text-center text-[11px] text-zinc-500">
-          бросок {(roll * 100).toFixed(2)}% · шанс {chancePct.toFixed(2)}%
+          бросок {(roll * 100).toFixed(2)}% · шанс {displayChancePct.toFixed(2)}%
         </p>
       ) : null}
     </div>
@@ -273,6 +294,10 @@ export default function UpgradePage() {
     cappedChance: boolean;
     maxChancePct: number;
   } | null>(null);
+  /** null = немає фільтра з сервера (гість / нема вибору); масив з API — лише дозволені номіналом цілі */
+  const [eligibleItems, setEligibleItems] = useState<CatalogItem[] | null>(null);
+  const [eligibleLoading, setEligibleLoading] = useState(false);
+  const eligibleFetchGen = useRef(0);
 
   const loadAll = useCallback(async () => {
     if (!getToken()) {
@@ -313,24 +338,74 @@ export default function UpgradePage() {
 
   const stakeTotal = useMemo(() => inputSum + balanceBoostRub, [inputSum, balanceBoostRub]);
 
+  const useServerEligible = selected.size >= 1 && stakeTotal > 0 && Boolean(getToken());
+
+  const targetPool = useMemo(() => {
+    if (!useServerEligible) {
+      return catalog;
+    }
+    if (eligibleItems !== null) {
+      return eligibleItems;
+    }
+    if (eligibleLoading) {
+      return [];
+    }
+    return catalog.filter((t) => t.price > stakeTotal);
+  }, [catalog, eligibleItems, eligibleLoading, stakeTotal, useServerEligible]);
+
   const validTargets = useMemo(() => {
     const q = search.trim().toLowerCase();
     const minP = priceMin === "" ? null : Number(priceMin);
     const maxP = priceMax === "" ? null : Number(priceMax);
-    return catalog.filter((t) => {
+    return targetPool.filter((t) => {
       if (t.price <= stakeTotal) return false;
       if (q && !t.name.toLowerCase().includes(q)) return false;
       if (minP != null && Number.isFinite(minP) && t.price < minP) return false;
       if (maxP != null && Number.isFinite(maxP) && t.price > maxP) return false;
       return true;
     });
-  }, [catalog, stakeTotal, search, priceMin, priceMax]);
+  }, [targetPool, stakeTotal, search, priceMin, priceMax]);
 
   useEffect(() => {
+    if (!useServerEligible) {
+      setEligibleItems(null);
+      setEligibleLoading(false);
+      return;
+    }
+    eligibleFetchGen.current += 1;
+    const gen = eligibleFetchGen.current;
+    setEligibleLoading(true);
+    setEligibleItems(null);
+    const inputItemIds = Array.from(selected);
+    const boost = balanceBoostPct;
+    const t = window.setTimeout(() => {
+      void (async () => {
+        const r = await apiFetch<{ items: CatalogItem[] }>("/api/upgrade/eligible-targets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inputItemIds,
+            balanceBoostPct: boost,
+          }),
+        });
+        if (gen !== eligibleFetchGen.current) return;
+        setEligibleLoading(false);
+        if (r.ok && r.data && Array.isArray(r.data.items)) {
+          setEligibleItems(r.data.items);
+        } else {
+          setEligibleItems(null);
+        }
+      })();
+    }, 320);
+    return () => clearTimeout(t);
+  }, [useServerEligible, selected, stakeTotal, balanceBoostPct]);
+
+  useEffect(() => {
+    if (spinning) return;
     if (!targetId || !validTargets.some((t) => t.id === targetId)) {
       setTargetId(validTargets[0]?.id || "");
     }
-  }, [validTargets, targetId]);
+  }, [validTargets, targetId, spinning]);
 
   const refreshPreview = useCallback(async () => {
     if (!getToken() || selected.size < 1 || !targetId) {
@@ -396,6 +471,7 @@ export default function UpgradePage() {
   }, [refreshPreview]);
 
   function toggleSel(id: string) {
+    if (spinning) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -407,17 +483,17 @@ export default function UpgradePage() {
   }
 
   function applyQuickPick(kind: "x2" | "x5" | "x10" | "p30" | "p50" | "p75" | "shuffle") {
-    if (inputSum <= 0) return;
+    if (spinning || inputSum <= 0) return;
+    const pool = targetPool.filter((t) => t.price > stakeTotal);
     let id: string | null = null;
     if (kind === "shuffle") {
-      const pool = catalog.filter((t) => t.price > stakeTotal);
       if (pool.length) id = pool[Math.floor(Math.random() * pool.length)]!.id;
-    } else if (kind === "x2") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal * 2);
-    else if (kind === "x5") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal * 5);
-    else if (kind === "x10") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal * 10);
-    else if (kind === "p30") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal / 0.3);
-    else if (kind === "p50") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal / 0.5);
-    else if (kind === "p75") id = pickTargetNearPrice(catalog, stakeTotal, stakeTotal / 0.75);
+    } else if (kind === "x2") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal * 2);
+    else if (kind === "x5") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal * 5);
+    else if (kind === "x10") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal * 10);
+    else if (kind === "p30") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal / 0.3);
+    else if (kind === "p50") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal / 0.5);
+    else if (kind === "p75") id = pickTargetNearPrice(pool, stakeTotal, stakeTotal / 0.75);
     if (id) {
       setTargetId(id);
       setShowResult(null);
@@ -438,6 +514,7 @@ export default function UpgradePage() {
     const r = await apiFetch<{
       win: boolean;
       chancePct: number;
+      nominalPct?: number;
       roll: number;
       target?: { name: string };
     }>("/api/upgrade/run", {
@@ -459,6 +536,9 @@ export default function UpgradePage() {
     setSpinKey((k) => k + 1);
     setLastRoll(data.roll);
     setChancePct(data.chancePct);
+    if (typeof data.nominalPct === "number" && Number.isFinite(data.nominalPct)) {
+      setNominalPct(data.nominalPct);
+    }
     setSpinning(true);
     window.setTimeout(() => {
       setSpinning(false);
@@ -525,8 +605,9 @@ export default function UpgradePage() {
                       <button
                         key={it.itemId}
                         type="button"
+                        disabled={spinning}
                         onClick={() => toggleSel(it.itemId)}
-                        className={`relative h-16 w-[4.5rem] overflow-hidden rounded-lg border ${rarityCardSurface(it.rarity || "common")} shadow-inner`}
+                        className={`relative h-16 w-[4.5rem] overflow-hidden rounded-lg border ${rarityCardSurface(it.rarity || "common")} shadow-inner disabled:pointer-events-none disabled:opacity-45`}
                       >
                         {it.image ? (
                           <Image src={it.image} alt="" fill className="object-contain p-0.5" unoptimized />
@@ -547,8 +628,9 @@ export default function UpgradePage() {
                     min={0}
                     max={100}
                     value={balanceBoostPct}
+                    disabled={spinning}
                     onChange={(e) => setBalanceBoostPct(Number(e.target.value))}
-                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-cb-stroke/80 accent-red-600"
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-cb-stroke/80 accent-red-600 disabled:cursor-not-allowed disabled:opacity-45"
                   />
                   <p className="mt-1 text-[10px] text-zinc-600">
                     Списывается с баланса при апгрейде (до {formatRub(balance)} ₽). Увеличивает шанс так же, как
@@ -559,28 +641,17 @@ export default function UpgradePage() {
 
               {/* Центр: индикатор + кнопка */}
               <div className="flex flex-col items-center justify-center gap-3">
-                {chancePct > 0 ? (
+                {nominalPct > 0 ? (
                   <div className="flex max-w-[280px] flex-col items-center gap-1 text-[11px] text-zinc-400">
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <span>
-                        Шанс: <strong className="font-mono text-cb-flame">{chancePct.toFixed(2)}%</strong>
-                      </span>
-                      <span className="text-cb-stroke">|</span>
-                      <span>
-                        база <span className="font-mono text-zinc-300">{nominalPct.toFixed(2)}%</span>
+                        Шанс: <strong className="font-mono text-cb-flame">{nominalPct.toFixed(2)}%</strong>
                       </span>
                     </div>
-                    {previewMeta != null &&
-                    Math.abs(previewMeta.nominalRawPct - nominalPct) > 0.02 ? (
-                      <p className="text-center text-[10px] leading-snug text-zinc-500">
-                        частка вкладу до обрізання лімітом:{" "}
-                        <span className="font-mono text-zinc-400">{previewMeta.nominalRawPct.toFixed(2)}%</span>
-                      </p>
-                    ) : null}
                     {previewMeta?.cappedChance ? (
                       <p className="text-center text-[10px] leading-snug text-amber-400/90">
                         шанс на верхній межі ({previewMeta.maxChancePct.toFixed(0)}%): додатковий баланс не збільшує
-                        відображений шанс
+                        показаний відсоток
                       </p>
                     ) : null}
                   </div>
@@ -588,7 +659,8 @@ export default function UpgradePage() {
                   <p className="text-center text-[11px] text-zinc-500">Выберите предметы и цель</p>
                 )}
                 <UpgradeGauge
-                  chancePct={chancePct}
+                  effectiveChancePct={chancePct}
+                  displayChancePct={nominalPct}
                   roll={lastRoll}
                   spinning={spinning}
                   spinKey={spinKey}
@@ -654,11 +726,23 @@ export default function UpgradePage() {
                       ["p75", "75%"],
                     ] as const
                   ).map(([k, lab]) => (
-                    <button key={k} type="button" className={quickBtn} onClick={() => applyQuickPick(k)}>
+                    <button
+                      key={k}
+                      type="button"
+                      disabled={spinning}
+                      className={`${quickBtn} disabled:pointer-events-none disabled:opacity-40`}
+                      onClick={() => applyQuickPick(k)}
+                    >
                       {lab}
                     </button>
                   ))}
-                  <button type="button" className={quickBtn} onClick={() => applyQuickPick("shuffle")} title="Случайная цель">
+                  <button
+                    type="button"
+                    disabled={spinning}
+                    className={`${quickBtn} disabled:pointer-events-none disabled:opacity-40`}
+                    onClick={() => applyQuickPick("shuffle")}
+                    title="Случайная цель"
+                  >
                     ⧈
                   </button>
                 </div>
@@ -676,15 +760,17 @@ export default function UpgradePage() {
                 <div className="flex items-center gap-1 rounded-lg border border-cb-stroke/80 bg-black/50 p-0.5">
                   <button
                     type="button"
+                    disabled={spinning}
                     onClick={() => setGridView(true)}
-                    className={`rounded-md px-2 py-1 text-[11px] ${gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
+                    className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-40 ${gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
                   >
                     ▦
                   </button>
                   <button
                     type="button"
+                    disabled={spinning}
                     onClick={() => setGridView(false)}
-                    className={`rounded-md px-2 py-1 text-[11px] ${!gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
+                    className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-40 ${!gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
                   >
                     ☰
                   </button>
@@ -712,12 +798,13 @@ export default function UpgradePage() {
                         <button
                           key={it.itemId}
                           type="button"
+                          disabled={spinning}
                           onClick={() => toggleSel(it.itemId)}
                           className={`relative overflow-hidden rounded-lg border p-1 text-left transition ${rarityCardSurface(it.rarity || "common")} ${
                             on
                               ? "ring-2 ring-cb-flame/60 shadow-[0_0_14px_rgba(255,49,49,0.25)]"
                               : "hover:brightness-110"
-                          }`}
+                          } disabled:pointer-events-none disabled:opacity-45`}
                         >
                           <div className="relative mx-auto mb-0.5 aspect-square w-full max-h-[4.5rem] bg-black/25">
                             {it.image ? (
@@ -745,10 +832,11 @@ export default function UpgradePage() {
                       <button
                         key={it.itemId}
                         type="button"
+                        disabled={spinning}
                         onClick={() => toggleSel(it.itemId)}
                         className={`flex w-full items-center gap-3 rounded-xl border px-2 py-2 text-left transition ${rarityCardSurface(it.rarity || "common")} ${
                           on ? "ring-2 ring-cb-flame/55 shadow-[0_0_12px_rgba(255,49,49,0.2)]" : "hover:brightness-105"
-                        }`}
+                        } disabled:pointer-events-none disabled:opacity-45`}
                       >
                         <div className="relative h-12 w-14 shrink-0 bg-black/25">
                           {it.image ? (
@@ -772,22 +860,31 @@ export default function UpgradePage() {
 
             <div className={`${panelClass} flex flex-col p-4`}>
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-[13px] font-bold text-white">
-                  Выберите предмет{" "}
-                  <span className="font-normal text-zinc-500">({validTargets.length} шт.)</span>
-                </h3>
+                <div className="min-w-0">
+                  <h3 className="text-[13px] font-bold text-white">
+                    {useServerEligible ? "Подходящие скины" : "Выберите предмет"}{" "}
+                    <span className="font-normal text-zinc-500">({validTargets.length} шт.)</span>
+                  </h3>
+                  {useServerEligible ? (
+                    <p className="mt-0.5 text-[10px] leading-snug text-zinc-500">
+                      Только цели, где шанс в допустимых пределах для вашего взноса
+                    </p>
+                  ) : null}
+                </div>
                 <div className="flex items-center gap-1 rounded-lg border border-cb-stroke/80 bg-black/50 p-0.5">
                   <button
                     type="button"
+                    disabled={spinning}
                     onClick={() => setGridView(true)}
-                    className={`rounded-md px-2 py-1 text-[11px] ${gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
+                    className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-40 ${gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
                   >
                     ▦
                   </button>
                   <button
                     type="button"
+                    disabled={spinning}
                     onClick={() => setGridView(false)}
-                    className={`rounded-md px-2 py-1 text-[11px] ${!gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
+                    className={`rounded-md px-2 py-1 text-[11px] disabled:opacity-40 ${!gridView ? "bg-red-600/30 text-cb-flame" : "text-zinc-500"}`}
                   >
                     ☰
                   </button>
@@ -800,9 +897,10 @@ export default function UpgradePage() {
                     type="number"
                     min={0}
                     value={priceMin}
+                    disabled={spinning}
                     onChange={(e) => setPriceMin(e.target.value)}
                     placeholder="₽"
-                    className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white"
+                    className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white disabled:cursor-not-allowed disabled:opacity-45"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wider text-zinc-500">
@@ -811,9 +909,10 @@ export default function UpgradePage() {
                     type="number"
                     min={0}
                     value={priceMax}
+                    disabled={spinning}
                     onChange={(e) => setPriceMax(e.target.value)}
                     placeholder="₽"
-                    className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white"
+                    className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white disabled:cursor-not-allowed disabled:opacity-45"
                   />
                 </label>
                 <div className="flex flex-1 flex-col gap-1 sm:min-w-[140px]">
@@ -821,9 +920,10 @@ export default function UpgradePage() {
                   <div className="flex rounded-lg border border-cb-stroke bg-black/50">
                     <input
                       value={search}
+                      disabled={spinning}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Название…"
-                      className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white placeholder:text-zinc-600"
+                      className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[12px] text-white placeholder:text-zinc-600 disabled:cursor-not-allowed disabled:opacity-45"
                     />
                     <span className="flex items-center px-2 text-zinc-500">⌕</span>
                   </div>
@@ -832,10 +932,30 @@ export default function UpgradePage() {
               <div className="max-h-[min(42vh,440px)] flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-cb-stroke/70 bg-black/35 p-2 sm:max-h-[480px]">
                 {validTargets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                      Используйте поиск или фильтр цены
-                    </p>
-                    <p className="text-[10px] text-zinc-600">Нет целей дороже взноса</p>
+                    {eligibleLoading && useServerEligible ? (
+                      <>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Загрузка подходящих скинов…
+                        </p>
+                        <p className="text-[10px] text-zinc-600">Сервер отфильтровывает цели по правилам шанса</p>
+                      </>
+                    ) : useServerEligible && eligibleItems !== null && eligibleItems.length === 0 ? (
+                      <>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          Нет целей с подходящим шансом
+                        </p>
+                        <p className="text-[10px] text-zinc-600">
+                          Увеличьте взнос или выберите дороже цель в каталоге (в пределах лимита шанса)
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          Используйте поиск или фильтр цены
+                        </p>
+                        <p className="text-[10px] text-zinc-600">Нет целей дороже взноса</p>
+                      </>
+                    )}
                   </div>
                 ) : gridView ? (
                   <div className="grid grid-cols-4 gap-1.5">
@@ -843,6 +963,7 @@ export default function UpgradePage() {
                       <button
                         key={t.id}
                         type="button"
+                        disabled={spinning}
                         onClick={() => {
                           setTargetId(t.id);
                           setShowResult(null);
@@ -852,7 +973,7 @@ export default function UpgradePage() {
                           targetId === t.id
                             ? "ring-2 ring-cb-flame/60 shadow-[0_0_14px_rgba(255,49,49,0.25)]"
                             : "hover:brightness-110"
-                        }`}
+                        } disabled:pointer-events-none disabled:opacity-45`}
                       >
                         <div className="relative mx-auto mb-0.5 aspect-square w-full max-h-[4.5rem] bg-black/25">
                           {t.image ? (
@@ -876,6 +997,7 @@ export default function UpgradePage() {
                       <button
                         key={t.id}
                         type="button"
+                        disabled={spinning}
                         onClick={() => {
                           setTargetId(t.id);
                           setShowResult(null);
@@ -885,7 +1007,7 @@ export default function UpgradePage() {
                           targetId === t.id
                             ? "ring-2 ring-cb-flame/55 shadow-[0_0_12px_rgba(255,49,49,0.2)]"
                             : "hover:brightness-105"
-                        }`}
+                        } disabled:pointer-events-none disabled:opacity-45`}
                       >
                         <div className="relative h-12 w-14 shrink-0 bg-black/25">
                           {t.image ? (
