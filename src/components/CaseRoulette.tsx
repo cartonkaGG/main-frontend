@@ -39,9 +39,8 @@ export function rouletteStripSlotCount(n: number): number {
 }
 
 /** Тривалість основної прокрутки (очікування API — окремо, без анімації стрічки). */
-export const ROULETTE_SPIN_DURATION_MS = 5500;
-export const ROULETTE_SPIN_EASE = "cubic-bezier(0.17, 0.67, 0.12, 1)";
-const START_OFFSET_X = Math.round((2600 * ROULETTE_SPIN_DURATION_MS) / 4800);
+export const ROULETTE_SPIN_DURATION_MS = 11000;
+export const ROULETTE_SPIN_EASE = "cubic-bezier(0.06, 0.88, 0.14, 1)";
 
 export const rarityBar: Record<string, string> = {
   common: "bg-zinc-500",
@@ -96,7 +95,7 @@ const RouletteCard = memo(function RouletteCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-500 ease-out ${fill} ${
+      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-200 ease-out ${fill} ${
         isWinner
           ? "z-10 scale-[1.12] shadow-[0_0_28px_rgba(255,49,49,0.35)] will-change-transform sm:scale-[1.14]"
           : "z-0 scale-100"
@@ -188,6 +187,7 @@ export function CaseRoulette({
         if (cancelled) return;
         rafSpinInner = requestAnimationFrame(() => {
           if (cancelled) return;
+          void viewportRef.current?.offsetWidth;
           setTransitionMs(ROULETTE_SPIN_DURATION_MS);
           setTx(endTx);
         });
@@ -215,12 +215,13 @@ export function CaseRoulette({
 
       landedRef.current = false;
 
+      const idleIdx = n * 3 + head;
+      const idleTx = vw / 2 - HALF_CARD - TRACK_PAD - idleIdx * CARD_STEP;
       const finalSlot = SPIN_ROUNDS * n + landOnIndex + head;
       const endTx = vw / 2 - HALF_CARD - TRACK_PAD - finalSlot * CARD_STEP;
-      const startTx = endTx + START_OFFSET_X;
 
       setTransitionMs(0);
-      setTx(startTx);
+      setTx(idleTx);
       runSpinRaf(endTx);
     };
 
@@ -303,7 +304,7 @@ export function CaseRoulette({
         </div>
 
         <div
-          className="flex h-full items-center gap-2 pl-4 pr-32 will-change-transform"
+          className="flex h-full items-center gap-2 pl-4 pr-32 will-change-transform [backface-visibility:hidden]"
           style={{
             transform: `translate3d(${tx}px,0,0)`,
             transition:

@@ -64,8 +64,8 @@ export function useLiveDrops() {
 
       s.on("live-drop", (d: LiveDrop) => {
         if (cancelled) return;
-        // Show new drops after 5–6 seconds, to make animation feel less abrupt.
-        const delayMs = 5000 + Math.floor(Math.random() * 1001);
+        // Показ у лайв-стрічці приблизно через 12 с після події.
+        const delayMs = 12000 + Math.floor(Math.random() * 400);
         const t = setTimeout(() => {
           if (cancelled) return;
           setDrops((prev) => [d, ...prev].slice(0, MAX_UI));

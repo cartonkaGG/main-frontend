@@ -23,8 +23,6 @@ const CARD_STEP_Y = 164;
 const HALF_CARD_Y = 76;
 const TRACK_PAD = 8;
 const SPIN_ROUNDS = 26;
-const START_OFFSET_Y = Math.round((2400 * ROULETTE_SPIN_DURATION_MS) / 4800);
-
 const BatchVerticalCard = memo(function BatchVerticalCard({
   item,
   isWinner,
@@ -37,7 +35,7 @@ const BatchVerticalCard = memo(function BatchVerticalCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[9.5rem] w-full max-w-[118px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-transform duration-500 ease-out sm:max-w-[132px] ${fill} ${
+      className={`relative h-[9.5rem] w-full max-w-[118px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-transform duration-200 ease-out sm:max-w-[132px] ${fill} ${
         isWinner ? "z-10 scale-[1.05] shadow-[0_0_26px_rgba(255,49,49,0.35)] will-change-transform" : "z-0 scale-100"
       }`}
     >
@@ -96,6 +94,10 @@ function VerticalColumn({
   useLayoutEffect(() => {
     if (!viewportRef.current || !items.length) return;
 
+    let cancelled = false;
+    let rafOuter: number | null = null;
+    let rafInner: number | null = null;
+
     const n = items.length;
     const head = rouletteStripHeadSlots(n);
 
@@ -119,21 +121,29 @@ function VerticalColumn({
     landedRef.current = false;
 
     const vh = viewportRef.current.clientHeight;
+    const idleIdx = n * 3 + head;
+    const idleTy = vh / 2 - HALF_CARD_Y - TRACK_PAD - idleIdx * CARD_STEP_Y;
     const finalSlot = SPIN_ROUNDS * n + landOnIndex + head;
     const endTy = vh / 2 - HALF_CARD_Y - TRACK_PAD - finalSlot * CARD_STEP_Y;
-    const startTy = endTy + START_OFFSET_Y;
 
     setTransitionMs(0);
-    setTy(startTy);
+    setTy(idleTy);
 
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    rafOuter = requestAnimationFrame(() => {
+      if (cancelled) return;
+      rafInner = requestAnimationFrame(() => {
+        if (cancelled) return;
+        void viewportRef.current?.offsetHeight;
         setTransitionMs(ROULETTE_SPIN_DURATION_MS);
         setTy(endTy);
       });
     });
 
-    return () => cancelAnimationFrame(id);
+    return () => {
+      cancelled = true;
+      if (rafOuter != null) cancelAnimationFrame(rafOuter);
+      if (rafInner != null) cancelAnimationFrame(rafInner);
+    };
   }, [items, spinWaiting, landOnIndex, landEpoch]);
 
   function onTransitionEnd(e: React.TransitionEvent) {
@@ -154,7 +164,7 @@ function VerticalColumn({
       className="relative h-[16rem] min-w-0 flex-1 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] sm:h-[18rem] sm:max-w-[148px] sm:flex-none"
     >
       <div
-        className="flex flex-col items-center gap-3 px-1.5 pb-28 pt-2.5 will-change-transform"
+        className="flex flex-col items-center gap-3 px-1.5 pb-28 pt-2.5 will-change-transform [backface-visibility:hidden]"
         style={{
           transform: `translate3d(0,${ty}px,0)`,
           transition:

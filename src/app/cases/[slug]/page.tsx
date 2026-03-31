@@ -827,14 +827,6 @@ export default function CaseOpenPage() {
                             Продать за {formatRub(drop.item.sellPrice)} ₽
                           </button>
                         </div>
-                        {drop.fair ? (
-                          <p className="max-w-md text-center font-mono text-[10px] leading-relaxed text-zinc-500">
-                            Uniform 0…1:{" "}
-                            <span className="text-zinc-400">{drop.fair.rollU}</span>
-                            {" · "}target RTP:{" "}
-                            <span className="text-zinc-400">{drop.fair.targetRtpPct}%</span>
-                          </p>
-                        ) : null}
                       </div>
                     )}
 

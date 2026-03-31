@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthModalHost } from "@/components/AuthModalHost";
+import { StormAtmosphere } from "@/components/StormAtmosphere";
 
 export const metadata: Metadata = {
   title: "StormBattle",
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="ru" className="dark lg:h-full">
       <body className="min-h-screen bg-[#020204] text-zinc-100 antialiased lg:h-dvh lg:overflow-hidden">
         <div className="cb-backdrop" aria-hidden>
+          <StormAtmosphere />
           <span className="cb-backdrop-vignette" />
           <span className="cb-backdrop-diagonal" />
           <span className="cb-backdrop-orb cb-backdrop-orb--a" />

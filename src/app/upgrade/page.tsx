@@ -114,7 +114,18 @@ function pickTargetNearPrice(catalog: CatalogItem[], inputSum: number, targetPri
   return best.id;
 }
 
-/** Коло: червоний сегмент = показаний шанс (номінал). */
+/**
+ * Умовна частка «1/x» у % (взнос / ціль) — тільки для дуги та цифри в центрі.
+ * Кидок на сервері: win ⟺ roll &lt; pWin за RTP (нижче за цей показник).
+ */
+function fairArcPctFromStakeAndTarget(stakeTotal: number, targetPrice: number): number {
+  const s = Number(stakeTotal);
+  const p = Number(targetPrice);
+  if (!Number.isFinite(s) || !Number.isFinite(p) || s <= 0 || p <= s) return 0;
+  return Math.min(100, (s / p) * 100);
+}
+
+/** Коло: дуга й цифра = fair 1/x; реальний pWin лише для кута стрілки після /run. */
 const GAUGE_R = 36;
 const GAUGE_C = 2 * Math.PI * GAUGE_R;
 
@@ -123,12 +134,11 @@ const UPGRADE_SPIN_DURATION_MS = 6500;
 const UPGRADE_SPIN_DURATION_SEC = UPGRADE_SPIN_DURATION_MS / 1000;
 
 /**
- * Сервер: win ⟺ roll < pWin. На колі червона займає перші nominalN оберту (0…nominalN).
- * Кут стрілки такий, що вона в червоному сегменті ⟺ виграш, і рівномірно в межах сегмента/між сегментами.
+ * Сервер: win ⟺ roll < pWin. Червона дуга = `arcFraction` (косметичний 1/x); стрілка зіставляє roll з фактичним pWin.
  */
-function rollToGaugeLandDegrees(roll: number, pWin: number, nominalN: number): number {
+function rollToGaugeLandDegrees(roll: number, pWin: number, arcFraction: number): number {
   const p = Math.min(1, Math.max(0, pWin));
-  const n = Math.min(1, Math.max(0, nominalN));
+  const n = Math.min(1, Math.max(0, arcFraction));
   if (roll < p) {
     if (p <= 0) return 0;
     return (roll / p) * n * 360;
@@ -139,17 +149,17 @@ function rollToGaugeLandDegrees(roll: number, pWin: number, nominalN: number): n
 }
 
 function UpgradeGauge({
-  effectiveChancePct,
-  displayChancePct,
+  /** Відображувана дуга/цифра: частка взнос/ціль (інтуїтивний «1/x»), не фінальний RTP */
+  displayArcPct,
+  /** Фактичний поріг з сервера — тільки для кута стрілки після /run */
+  serverPWin,
   roll,
   spinning,
   spinKey,
   done,
 }: {
-  /** pWin після RTP/лімітів — для відповідності roll ↔ виграш */
-  effectiveChancePct: number;
-  /** Показаний шанс — довжина червоної дуги й підпис */
-  displayChancePct: number;
+  displayArcPct: number;
+  serverPWin: number | null;
   roll: number | null;
   spinning: boolean;
   spinKey: number;
@@ -158,34 +168,52 @@ function UpgradeGauge({
   const uid = useId().replace(/:/g, "");
   const gradId = `ug-grad-${uid}`;
   const glowId = `ug-glow-${uid}`;
-  const pWin = Math.min(100, Math.max(0, effectiveChancePct)) / 100;
-  const n = Math.min(100, Math.max(0, displayChancePct)) / 100;
-  const progressLen = n * GAUGE_C;
+  const pWin =
+    serverPWin != null && Number.isFinite(serverPWin)
+      ? Math.min(1, Math.max(0, serverPWin))
+      : 0;
+  const pctClamped = Math.min(100, Math.max(0, Number(displayArcPct) || 0));
+  const arcFrac = pctClamped / 100;
+  const progressLen = arcFrac * GAUGE_C;
+  const labelPct = pctClamped;
   const land =
-    roll == null ? 0 : rollToGaugeLandDegrees(roll, pWin, n);
+    roll == null || pWin <= 0
+      ? 0
+      : rollToGaugeLandDegrees(roll, pWin, arcFrac);
   const targetRot = 4 * 360 + land;
   const [rot, setRot] = useState(0);
 
   useEffect(() => {
     if (spinning) {
       setRot(0);
-      const id = window.setTimeout(() => setRot(targetRot), 60);
+      const id = window.setTimeout(() => setRot(targetRot), 80);
       return () => clearTimeout(id);
     }
     if (done && roll != null) setRot(targetRot);
     else setRot(0);
   }, [spinning, spinKey, done, roll, targetRot]);
 
-  const dashTransition = "stroke-dasharray 0.55s cubic-bezier(0.33, 1, 0.68, 1)";
+  const dashTransition = "stroke-dasharray 0.75s cubic-bezier(0.33, 1, 0.68, 1)";
+  const idleNeedle = !spinning && !done;
+  const hasChance = pctClamped > 0;
 
   return (
     <div className="relative mx-auto flex w-full max-w-[300px] flex-col items-center sm:max-w-[320px]">
       <div className="relative aspect-square w-full">
+        {/* Повільний конусний ореол */}
         <div
-          className="pointer-events-none absolute inset-[6%] rounded-full bg-red-500/20 blur-2xl"
+          className="pointer-events-none absolute inset-[1%] z-0 rounded-full opacity-[0.22] blur-[2px] animate-ug-halo-spin motion-reduce:animate-none"
+          style={{
+            background:
+              "conic-gradient(from 0deg, transparent 0deg, rgba(239,68,68,0.35) 90deg, transparent 180deg, rgba(248,113,113,0.2) 270deg, transparent 360deg)",
+          }}
           aria-hidden
         />
-        <svg className="relative z-[1] h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden>
+        <div
+          className="pointer-events-none absolute inset-[6%] z-0 rounded-full bg-red-500/25 blur-2xl animate-ug-glow-pulse motion-reduce:animate-none"
+          aria-hidden
+        />
+        <svg className="relative z-[1] h-full w-full -rotate-90 drop-shadow-[0_0_20px_rgba(220,38,38,0.12)]" viewBox="0 0 100 100" aria-hidden>
           <defs>
             <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#fca5a5" />
@@ -223,17 +251,44 @@ function UpgradeGauge({
             fill="none"
             stroke={`url(#${gradId})`}
             strokeWidth="8"
-            strokeLinecap="round"
+            strokeLinecap="butt"
             strokeDasharray={`${progressLen} ${GAUGE_C}`}
             filter={`url(#${glowId})`}
             style={{ transition: dashTransition }}
+            className={
+              hasChance
+                ? "motion-safe:animate-ug-arc-soft motion-reduce:animate-none"
+                : ""
+            }
           />
+          {/* Мітка межі «виграш / програш» за дугою */}
+          {arcFrac > 0.02 && arcFrac < 0.998 ? (
+            <line
+              key={`tick-${pctClamped.toFixed(1)}`}
+              x1={50 + GAUGE_R * Math.cos(arcFrac * 2 * Math.PI)}
+              y1={50 + GAUGE_R * Math.sin(arcFrac * 2 * Math.PI)}
+              x2={50 + (GAUGE_R + 5) * Math.cos(arcFrac * 2 * Math.PI)}
+              y2={50 + (GAUGE_R + 5) * Math.sin(arcFrac * 2 * Math.PI)}
+              stroke="rgba(250,250,250,0.65)"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              className="animate-ug-tick-fade motion-reduce:animate-none"
+            />
+          ) : null}
         </svg>
         <div className="pointer-events-none absolute inset-0 z-[2] text-[10px] font-bold tracking-tight text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-          <span className="absolute left-1/2 top-[3%] -translate-x-1/2">0%</span>
-          <span className="absolute right-[4%] top-1/2 -translate-y-1/2">25%</span>
-          <span className="absolute bottom-[3%] left-1/2 -translate-x-1/2">50%</span>
-          <span className="absolute left-[4%] top-1/2 -translate-y-1/2">75%</span>
+          <span className="absolute left-1/2 top-[3%] -translate-x-1/2 transition-colors duration-500">
+            0%
+          </span>
+          <span className="absolute right-[4%] top-1/2 -translate-y-1/2 transition-colors duration-500">
+            25%
+          </span>
+          <span className="absolute bottom-[3%] left-1/2 -translate-x-1/2 transition-colors duration-500">
+            50%
+          </span>
+          <span className="absolute left-[4%] top-1/2 -translate-y-1/2 transition-colors duration-500">
+            75%
+          </span>
         </div>
         <div
           key={spinKey}
@@ -246,16 +301,28 @@ function UpgradeGauge({
           }}
         >
           <div className="absolute top-[8%] flex h-[34%] w-2 items-end justify-center sm:w-2.5">
-            <div className="h-full w-full rounded-full bg-gradient-to-b from-white via-red-200 to-cb-flame shadow-[0_0_14px_rgba(255,70,70,0.95)] ring-1 ring-white/30" />
+            <div
+              className={`h-full w-full rounded-none bg-gradient-to-b from-white via-red-200 to-cb-flame shadow-[0_0_14px_rgba(255,70,70,0.95)] ring-1 ring-white/30 ${
+                idleNeedle
+                  ? "motion-safe:animate-ug-needle-idle motion-reduce:animate-none"
+                  : ""
+              }`}
+            />
           </div>
         </div>
         <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center">
-          <div className="rounded-2xl border-2 border-cb-flame/35 bg-black/70 px-3 py-1.5 shadow-[0_0_24px_rgba(220,38,38,0.25)] backdrop-blur-sm sm:px-3.5 sm:py-2">
+          <div
+            className={`rounded-2xl border-2 border-cb-flame/35 bg-black/70 px-3 py-1.5 backdrop-blur-sm transition-shadow duration-500 sm:px-3.5 sm:py-2 ${
+              hasChance && !spinning
+                ? "motion-safe:animate-ug-hub-breathe motion-reduce:animate-none shadow-[0_0_24px_rgba(220,38,38,0.3)]"
+                : "shadow-[0_0_24px_rgba(220,38,38,0.25)]"
+            } ${spinning ? "scale-[1.02] border-cb-flame/55" : ""}`}
+          >
             <span className="block text-center text-[8px] font-bold uppercase tracking-wider text-zinc-500">
-              Шанс
+              ШАНС
             </span>
             <span className="font-mono text-base font-black tabular-nums text-cb-flame sm:text-lg">
-              {displayChancePct.toFixed(2)}%
+              {labelPct.toFixed(2)}%
             </span>
           </div>
         </div>
@@ -264,32 +331,42 @@ function UpgradeGauge({
       {/* Дублюємо прогрес лінійно — найкраще видно заповнення */}
       <div className="mt-4 w-full max-w-[280px] px-0.5 sm:max-w-[300px]">
         <div className="mb-1 text-[10px] text-zinc-500">
-          <span>Зона виграшу</span>
+          <span>Полоса 1/x (визуально)</span>
         </div>
         <div
           className="relative h-4 w-full overflow-hidden rounded-full border border-cb-stroke/70 bg-zinc-950/95 shadow-inner"
           role="progressbar"
-          aria-valuenow={Math.round(Math.min(100, Math.max(0, displayChancePct)) * 10) / 10}
+          aria-valuenow={Math.round(Math.min(100, Math.max(0, labelPct)) * 10) / 10}
           aria-valuemin={0}
           aria-valuemax={100}
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-red-950 via-red-500 to-amber-400 shadow-[0_0_12px_rgba(239,68,68,0.45)] transition-[width] duration-500 ease-out"
-            style={{ width: `${n * 100}%` }}
-          />
-          {n >= 0.12 ? (
+            className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-red-950 via-red-500 to-amber-400 shadow-[0_0_12px_rgba(239,68,68,0.45)] transition-[width] duration-700 ease-out"
+            style={{ width: `${arcFrac * 100}%` }}
+          >
+            {arcFrac > 0.04 ? (
+              <div
+                className="pointer-events-none absolute inset-0 opacity-90 motion-safe:animate-ug-bar-shine motion-reduce:animate-none"
+                style={{
+                  background:
+                    "linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.22) 45%, transparent 90%)",
+                  width: "55%",
+                }}
+              />
+            ) : null}
+          </div>
+          {arcFrac >= 0.12 ? (
             <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase tracking-wide text-white/90 drop-shadow-md">
-              зона виграшу
+              шанс
             </span>
           ) : null}
         </div>
+        {hasChance ? (
+          <p className="mt-2 text-center text-[9px] leading-snug text-zinc-600">
+            Итоговая вероятность по настройкам сайта (RTP) ниже; стрелка соответствует реальному броску.
+          </p>
+        ) : null}
       </div>
-
-      {done && roll != null ? (
-        <p className="mt-3 text-center text-[11px] text-zinc-500">
-          бросок {(roll * 100).toFixed(2)}% · шанс {displayChancePct.toFixed(2)}%
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -303,8 +380,6 @@ export default function UpgradePage() {
   const [balance, setBalance] = useState<number>(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [targetId, setTargetId] = useState<string>("");
-  const [chancePct, setChancePct] = useState<number>(0);
-  const [nominalPct, setNominalPct] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [spinKey, setSpinKey] = useState(0);
@@ -322,6 +397,10 @@ export default function UpgradePage() {
     cappedChance: boolean;
     maxChancePct: number;
   } | null>(null);
+  /** Точний pWin з останнього /run (threshold) — збіг стрілки з сервером */
+  const [serverPWin, setServerPWin] = useState<number | null>(null);
+  /** Після /run ціль скидається — тримаємо fair 1/x для дуги до наступного вибору */
+  const [gaugeHoldDisplayPct, setGaugeHoldDisplayPct] = useState<number | null>(null);
   /** null = немає фільтра з сервера (гість / нема вибору); масив з API — лише дозволені номіналом цілі */
   const [eligibleItems, setEligibleItems] = useState<CatalogItem[] | null>(null);
   const [eligibleLoading, setEligibleLoading] = useState(false);
@@ -437,8 +516,6 @@ export default function UpgradePage() {
 
   const refreshPreview = useCallback(async () => {
     if (!getToken() || selected.size < 1 || !targetId) {
-      setChancePct(0);
-      setNominalPct(0);
       setPreviewMeta(null);
       return;
     }
@@ -463,8 +540,6 @@ export default function UpgradePage() {
       }),
     });
     if (r.ok && r.data) {
-      setChancePct(r.data.chancePct);
-      setNominalPct(r.data.nominalPct);
       if (typeof r.data.serverBalance === "number" && Number.isFinite(r.data.serverBalance)) {
         setBalance(r.data.serverBalance);
       }
@@ -486,8 +561,6 @@ export default function UpgradePage() {
       }
       setErr(null);
     } else {
-      setChancePct(0);
-      setNominalPct(0);
       setPreviewMeta(null);
       setErr(r.error || null);
     }
@@ -508,6 +581,8 @@ export default function UpgradePage() {
     });
     setShowResult(null);
     setLastRoll(null);
+    setServerPWin(null);
+    setGaugeHoldDisplayPct(null);
   }
 
   function applyQuickPick(kind: "x2" | "x5" | "x10" | "p30" | "p50" | "p75" | "shuffle") {
@@ -526,6 +601,8 @@ export default function UpgradePage() {
       setTargetId(id);
       setShowResult(null);
       setLastRoll(null);
+      setServerPWin(null);
+      setGaugeHoldDisplayPct(null);
     }
   }
 
@@ -538,13 +615,19 @@ export default function UpgradePage() {
     setBusy(true);
     setShowResult(null);
     setLastRoll(null);
+    setServerPWin(null);
+    setGaugeHoldDisplayPct(null);
     setLastOutcomeName(null);
+    const holdArc =
+      target && stakeTotal > 0 ? fairArcPctFromStakeAndTarget(stakeTotal, target.price) : 0;
     const r = await apiFetch<{
       win: boolean;
       chancePct: number;
       nominalPct?: number;
       roll: number;
+      threshold?: number;
       target?: { name: string };
+      item?: { itemId: string } | null;
     }>("/api/upgrade/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -562,24 +645,38 @@ export default function UpgradePage() {
     const data = r.data!;
     setLastOutcomeName(data.win && data.target?.name ? data.target.name : null);
     setSpinKey((k) => k + 1);
-    setLastRoll(data.roll);
-    setChancePct(data.chancePct);
-    if (typeof data.nominalPct === "number" && Number.isFinite(data.nominalPct)) {
-      setNominalPct(data.nominalPct);
+    const rollN = typeof data.roll === "number" && Number.isFinite(data.roll) ? data.roll : null;
+    setLastRoll(rollN);
+    if (typeof data.threshold === "number" && Number.isFinite(data.threshold)) {
+      setServerPWin(Math.min(1, Math.max(0, data.threshold)));
     }
+    if (holdArc > 0) setGaugeHoldDisplayPct(holdArc);
     setSpinning(true);
     window.setTimeout(() => {
-      setSpinning(false);
-      setShowResult(data.win ? "win" : "loss");
-      setSelected(new Set());
-      setTargetId("");
-      setBalanceBoostPct(0);
-      void loadAll();
-      window.dispatchEvent(new CustomEvent("cd-balance-updated"));
+      void (async () => {
+        setSpinning(false);
+        setShowResult(data.win ? "win" : "loss");
+        if (data.win && data.item?.itemId) {
+          await loadAll();
+          setSelected(new Set([data.item.itemId]));
+          setTargetId("");
+          setBalanceBoostPct(0);
+        } else {
+          setSelected(new Set());
+          setTargetId("");
+          setBalanceBoostPct(0);
+          await loadAll();
+        }
+        window.dispatchEvent(new CustomEvent("cd-balance-updated"));
+      })();
     }, UPGRADE_SPIN_DURATION_MS);
   }
 
   const target = catalog.find((t) => t.id === targetId);
+  const fairArcPct = useMemo(
+    () => fairArcPctFromStakeAndTarget(stakeTotal, target?.price ?? 0),
+    [stakeTotal, target?.price],
+  );
   const selectedItems = useMemo(
     () => inventory.filter((i) => selected.has(i.itemId)),
     [inventory, selected],
@@ -590,7 +687,7 @@ export default function UpgradePage() {
 
   return (
     <SiteShell>
-      <div className="min-h-[calc(100dvh-52px)] bg-cb-void text-zinc-200">
+      <div className="min-h-[calc(100dvh-52px)] bg-transparent text-zinc-200">
         <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-4 sm:py-5">
           {err ? (
             <p className="mb-4 rounded-lg border border-red-500/35 bg-red-950/25 px-3 py-2 text-sm text-red-300">{err}</p>
@@ -678,26 +775,16 @@ export default function UpgradePage() {
 
               {/* Центр: индикатор + кнопка */}
               <div className="flex flex-col items-center justify-center gap-3">
-                {nominalPct > 0 ? (
-                  <div className="flex max-w-[280px] flex-col items-center gap-1 text-[11px] text-zinc-400">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <span>
-                        Шанс: <strong className="font-mono text-cb-flame">{nominalPct.toFixed(2)}%</strong>
-                      </span>
-                    </div>
-                    {previewMeta?.cappedChance ? (
-                      <p className="text-center text-[10px] leading-snug text-amber-400/90">
-                        шанс на верхней границе ({previewMeta.maxChancePct.toFixed(0)}%): дополнительный баланс не увеличивает
-                        показанный процент
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
+                {fairArcPct <= 0 && gaugeHoldDisplayPct == null ? (
                   <p className="text-center text-[11px] text-zinc-500">Выберите предметы и цель</p>
-                )}
+                ) : previewMeta?.cappedChance && gaugeHoldDisplayPct == null ? (
+                  <p className="max-w-[280px] text-center text-[10px] leading-snug text-amber-400/90">
+                    Реальный шанс (RTP) на верхней границе ({previewMeta.maxChancePct.toFixed(0)}%)
+                  </p>
+                ) : null}
                 <UpgradeGauge
-                  effectiveChancePct={chancePct}
-                  displayChancePct={nominalPct}
+                  displayArcPct={gaugeHoldDisplayPct ?? fairArcPct}
+                  serverPWin={serverPWin}
                   roll={lastRoll}
                   spinning={spinning}
                   spinKey={spinKey}
@@ -1009,6 +1096,8 @@ export default function UpgradePage() {
                           setTargetId(t.id);
                           setShowResult(null);
                           setLastRoll(null);
+                          setServerPWin(null);
+                          setGaugeHoldDisplayPct(null);
                         }}
                         className={`relative overflow-hidden rounded-lg border p-1 text-left transition ${rarityCardSurface(t.rarity)} ${
                           targetId === t.id
@@ -1043,6 +1132,8 @@ export default function UpgradePage() {
                           setTargetId(t.id);
                           setShowResult(null);
                           setLastRoll(null);
+                          setServerPWin(null);
+                          setGaugeHoldDisplayPct(null);
                         }}
                         className={`flex w-full items-center gap-3 rounded-xl border px-2 py-2 text-left transition ${rarityCardSurface(t.rarity)} ${
                           targetId === t.id
