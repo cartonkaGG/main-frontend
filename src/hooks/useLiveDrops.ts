@@ -38,6 +38,30 @@ export function useLiveDrops() {
         autoConnect: true,
       });
       socketRef.current = s;
+
+      function authSupportSocket() {
+        try {
+          const token = localStorage.getItem("cd_token");
+          if (token) s.emit("support-notify-auth", { token });
+        } catch {
+          /* ignore */
+        }
+      }
+      s.on("connect", authSupportSocket);
+      authSupportSocket();
+
+      s.on("support-reply", (payload: { ticketId: string; subject?: string }) => {
+        if (cancelled || typeof window === "undefined") return;
+        window.dispatchEvent(
+          new CustomEvent("cd-support-reply", {
+            detail: {
+              ticketId: String(payload?.ticketId || ""),
+              subject: String(payload?.subject || ""),
+            },
+          }),
+        );
+      });
+
       s.on("live-drop", (d: LiveDrop) => {
         if (cancelled) return;
         // Show new drops after 5–6 seconds, to make animation feel less abrupt.

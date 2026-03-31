@@ -102,12 +102,12 @@ export function HomePage() {
 
       {featured.length > 0 && (
         <section className="border-t border-cb-stroke/80 bg-black/25 px-6 py-14">
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-7xl">
             <h2 className="mb-8 flex items-center gap-3 text-2xl font-bold text-white">
               <span className="h-1 w-10 rounded-full bg-gradient-to-r from-cb-flame to-transparent" />
               Рекомендуемые
             </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {featured.map((c) => (
                 <CaseCard
                   key={c.slug}
@@ -125,18 +125,25 @@ export function HomePage() {
         id="cases"
         className="scroll-mt-24 border-b border-cb-stroke bg-cb-panel/30 px-6 py-12"
       >
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-7xl">
           {error && <p className="mb-6 text-red-400">{error}</p>}
           {sectionKeys.map((key) => {
             const list = cases.filter((c) => (c.category || "popular") === key);
             if (!list.length) return null;
             return (
               <div key={key} className="mb-14 last:mb-0">
-                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white">
-                  <span className="h-px max-w-12 flex-1 bg-gradient-to-r from-cb-flame to-transparent" />
-                  {CATEGORY_LABELS[key] || key}
+                <h2 className="mb-6 flex w-full items-center justify-center gap-4 text-xl font-bold text-white">
+                  <span
+                    aria-hidden
+                    className="h-px min-w-8 flex-1 bg-gradient-to-r from-transparent to-cb-flame/90"
+                  />
+                  <span className="shrink-0 text-center">{CATEGORY_LABELS[key] || key}</span>
+                  <span
+                    aria-hidden
+                    className="h-px min-w-8 flex-1 bg-gradient-to-l from-transparent to-cb-flame/90"
+                  />
                 </h2>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {list.map((c) => (
                     <CaseCard
                       key={c.slug}

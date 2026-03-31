@@ -89,7 +89,7 @@ export default function SupportPage() {
             />
           </label>
           <label className="block space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Опис</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Описание</span>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}

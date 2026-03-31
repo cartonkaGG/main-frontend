@@ -112,11 +112,14 @@ function SupportFabLink() {
   );
 }
 
+type SupportReplyToast = { ticketId: string; subject: string };
+
 export function SiteShell({ children }: Props) {
   const drops = useLiveDrops();
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cryptoTopUpOpen, setCryptoTopUpOpen] = useState(false);
+  const [supportToast, setSupportToast] = useState<SupportReplyToast | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const loadMe = useCallback(async () => {
@@ -363,6 +366,43 @@ export function SiteShell({ children }: Props) {
         onSuccess={() => setCryptoTopUpOpen(false)}
       />
       <SupportFabLink />
+
+      {supportToast && (
+        <div
+          className="fixed bottom-20 right-4 z-[120] max-w-sm sm:bottom-6 sm:right-6"
+          role="status"
+        >
+          <div className="rounded-2xl border border-sky-500/40 bg-gradient-to-br from-sky-950/95 via-zinc-950 to-black p-4 shadow-[0_0_32px_rgba(56,189,248,0.25)] backdrop-blur-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-sky-400/90">
+                  Поддержка ответила
+                </p>
+                <p className="mt-1 truncate text-sm font-medium text-zinc-100">
+                  {supportToast.subject || "Ваше обращение"}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Закрыть уведомление"
+                className="shrink-0 rounded-lg p-1 text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
+                onClick={() => setSupportToast(null)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <Link
+              href={`/support/${encodeURIComponent(supportToast.ticketId)}`}
+              className="mt-3 block w-full rounded-xl bg-sky-600 py-2.5 text-center text-sm font-bold text-white transition hover:bg-sky-500"
+              onClick={() => setSupportToast(null)}
+            >
+              Открыть переписку
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

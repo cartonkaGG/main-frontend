@@ -30,6 +30,10 @@ export default function SupportTicketPage() {
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
+  const [actionErr, setActionErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const load = useCallback(async () => {
     if (!getToken() || !id) return;
@@ -51,6 +55,59 @@ export default function SupportTicketPage() {
     void load();
   }, [load, router]);
 
+  useEffect(() => {
+    function onThreadRefresh(e: Event) {
+      const tid = (e as CustomEvent<{ ticketId?: string }>).detail?.ticketId;
+      if (tid === id) void load();
+    }
+    window.addEventListener("cd-support-ticket-refresh", onThreadRefresh as EventListener);
+    return () => window.removeEventListener("cd-support-ticket-refresh", onThreadRefresh as EventListener);
+  }, [load, id]);
+
+  const isOpen = ticket?.status === "open";
+
+  async function sendReply() {
+    const text = reply.trim();
+    if (text.length < 2 || !id) return;
+    setSending(true);
+    setActionErr(null);
+    const r = await apiFetch<{ ticket: Ticket }>(
+      `/api/support/tickets/${encodeURIComponent(id)}/messages`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      }
+    );
+    setSending(false);
+    if (!r.ok) {
+      setActionErr(r.error || "Ошибка отправки");
+      return;
+    }
+    setReply("");
+    setTicket(r.data?.ticket ?? null);
+  }
+
+  async function closeTicket() {
+    if (!id) return;
+    setClosing(true);
+    setActionErr(null);
+    const r = await apiFetch<{ ticket: Ticket }>(
+      `/api/support/tickets/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "closed" }),
+      }
+    );
+    setClosing(false);
+    if (!r.ok) {
+      setActionErr(r.error || "Не удалось закрыть");
+      return;
+    }
+    setTicket(r.data?.ticket ?? null);
+  }
+
   return (
     <SiteShell>
       <div className="mx-auto max-w-2xl space-y-6 px-4 py-10 sm:px-6">
@@ -58,6 +115,7 @@ export default function SupportTicketPage() {
           ← Все обращения
         </Link>
         {err && <p className="text-sm text-red-300">{err}</p>}
+        {actionErr && <p className="text-sm text-amber-300">{actionErr}</p>}
         {ticket && (
           <div className="space-y-4">
             <div>
@@ -89,6 +147,39 @@ export default function SupportTicketPage() {
                 </li>
               ))}
             </ul>
+            {isOpen && (
+              <div className="space-y-3 border-t border-cb-stroke/60 pt-4">
+                <label className="block text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  Ответ в поддержку
+                </label>
+                <textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  rows={4}
+                  maxLength={8000}
+                  placeholder="Напишите сообщение…"
+                  className="w-full resize-y rounded-xl border border-cb-stroke/80 bg-cb-panel/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={sending || reply.trim().length < 2}
+                    onClick={() => void sendReply()}
+                    className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {sending ? "Отправка…" : "Отправить"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={closing}
+                    onClick={() => void closeTicket()}
+                    className="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {closing ? "Закрытие…" : "Закрыть обращение"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
