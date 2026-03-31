@@ -87,6 +87,7 @@ export default function ProfilePage() {
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
   const [sellAllBusy, setSellAllBusy] = useState(false);
+  const [depositNotice, setDepositNotice] = useState<string | null>(null);
 
   const inventorySellTotal = useMemo(
     () => (me?.inventory ?? []).reduce((s, it) => s + (Number(it.sellPrice) || 0), 0),
@@ -122,6 +123,20 @@ export default function ProfilePage() {
     window.addEventListener("cd-balance-updated", h);
     return () => window.removeEventListener("cd-balance-updated", h);
   }, [load]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hydrated) return;
+    const q = new URLSearchParams(window.location.search);
+    const d = q.get("deposit");
+    if (d === "success") {
+      window.dispatchEvent(new CustomEvent("cd-balance-updated"));
+      window.history.replaceState({}, "", "/profile");
+      setDepositNotice("После успешной оплаты баланс обновится автоматически (обычно в течение нескольких минут).");
+    } else if (d === "cancel") {
+      window.history.replaceState({}, "", "/profile");
+      setDepositNotice("Оплата отменена.");
+    }
+  }, [hydrated]);
 
   const bestDrop: BestDrop | null = me
     ? me.bestEverItem
@@ -249,6 +264,12 @@ export default function ProfilePage() {
             {err && (
               <p className="mb-6 rounded-xl border border-red-500/30 bg-red-950/20 px-4 py-3 text-sm text-red-300">
                 {err}
+              </p>
+            )}
+
+            {depositNotice && (
+              <p className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-200/95">
+                {depositNotice}
               </p>
             )}
 

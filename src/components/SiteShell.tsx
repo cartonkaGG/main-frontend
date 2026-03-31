@@ -8,6 +8,7 @@ import { apiFetch, clearToken, getToken, steamLoginUrl } from "@/lib/api";
 import { formatRub } from "@/lib/money";
 import { useLiveDrops } from "@/hooks/useLiveDrops";
 import { LiveDropsRail } from "@/components/LiveDropsRail";
+import { CryptoTopUpModal } from "@/components/CryptoTopUpModal";
 
 type Me = {
   displayName: string;
@@ -101,6 +102,7 @@ export function SiteShell({ children }: Props) {
   const drops = useLiveDrops();
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cryptoTopUpOpen, setCryptoTopUpOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const loadMe = useCallback(async () => {
@@ -122,6 +124,12 @@ export function SiteShell({ children }: Props) {
     window.addEventListener("cd-balance-updated", h);
     return () => window.removeEventListener("cd-balance-updated", h);
   }, [loadMe]);
+
+  useEffect(() => {
+    const h = () => setCryptoTopUpOpen(true);
+    window.addEventListener("cd-open-crypto-topup", h);
+    return () => window.removeEventListener("cd-open-crypto-topup", h);
+  }, []);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -173,19 +181,37 @@ export function SiteShell({ children }: Props) {
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
           {me && balanceStr && (
-            <div className="hidden lg:block">
-              <div className="inline-flex flex-col items-center gap-0.5 rounded-xl border border-orange-500/35 bg-gradient-to-r from-orange-950/50 to-violet-950/40 px-3 py-1.5 sm:items-start">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-orange-300/80">
-                  Баланс
-                </span>
-                <span className="font-mono text-base font-black text-white">
-                  {balanceStr}{" "}
-                  <span className="text-sm font-bold text-orange-400/90">₽</span>
-                </span>
+            <div className="hidden items-stretch lg:flex">
+              <div className="flex items-center gap-1.5 rounded-3xl border border-cb-stroke/70 bg-gradient-to-br from-zinc-950/95 via-cb-panel/35 to-black/90 p-1 pl-3 shadow-[inset_0_1px_0_rgba(255,49,49,0.1),0_4px_24px_rgba(0,0,0,0.35)]">
+                <div className="flex min-w-0 flex-col justify-center gap-0.5 py-1.5 pr-1">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Баланс
+                  </span>
+                  <span className="font-mono text-lg font-black tabular-nums leading-none tracking-tight text-white">
+                    {balanceStr}
+                    <span className="ml-1 text-base font-bold text-cb-flame/95">₽</span>
+                  </span>
+                </div>
+                <div className="h-8 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-cb-stroke/80 to-transparent" aria-hidden />
+                <button
+                  type="button"
+                  onClick={() => setCryptoTopUpOpen(true)}
+                  className="shrink-0 rounded-xl bg-gradient-to-r from-red-900/90 via-cb-flame/90 to-red-600/95 px-4 py-2 text-[11px] font-black uppercase tracking-wide text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:ring-2 focus-visible:ring-cb-flame/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                >
+                  Пополнить
+                </button>
               </div>
             </div>
           )}
           {me ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCryptoTopUpOpen(true)}
+                className="rounded-2xl border border-cb-flame/40 bg-gradient-to-r from-red-950/70 to-cb-flame/20 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cb-flame transition hover:border-cb-flame/60 hover:brightness-110 lg:hidden"
+              >
+                Пополнить
+              </button>
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -236,6 +262,17 @@ export function SiteShell({ children }: Props) {
                   >
                     Апгрейд
                   </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-4 py-2.5 text-left text-sm text-cb-flame hover:bg-red-950/20"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setCryptoTopUpOpen(true);
+                    }}
+                  >
+                    Пополнить
+                  </button>
                   <Link
                     href="/profile"
                     role="menuitem"
@@ -275,6 +312,7 @@ export function SiteShell({ children }: Props) {
                 </div>
               )}
             </div>
+            </div>
           ) : (
             <a
               href={steamLoginUrl()}
@@ -287,6 +325,11 @@ export function SiteShell({ children }: Props) {
       </header>
 
       <LiveDropsRail drops={drops}>{children}</LiveDropsRail>
+      <CryptoTopUpModal
+        open={cryptoTopUpOpen}
+        onClose={() => setCryptoTopUpOpen(false)}
+        onSuccess={() => setCryptoTopUpOpen(false)}
+      />
       <SupportFabLink />
     </div>
   );
