@@ -116,6 +116,12 @@ export default function AdminUsersPage() {
   }, [steamId]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q && q.trim()) setSteamId(q.trim());
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       const r = await apiFetch<AdminUsersSummary>("/api/admin/users/summary");

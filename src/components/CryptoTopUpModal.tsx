@@ -11,7 +11,19 @@ type Config = {
   ipnUrlConfigured?: boolean;
   minUsd: number;
   rubPerUsd: number;
+  rubRateSource?: string;
+  rubRateUpdatedAt?: number | null;
   cryptos: CryptoOpt[];
+};
+
+type DepositPreview = {
+  rubPerUsd: number;
+  rubRateSource?: string;
+  creditRubBase: number;
+  bonusPercent: number;
+  bonusRub: number;
+  totalRub: number;
+  promoError: string | null;
 };
 
 const panelClass =
@@ -30,6 +42,8 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
   const [promo, setPromo] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [preview, setPreview] = useState<DepositPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const loadCfg = useCallback(async () => {
     const r = await apiFetch<Config>("/api/nowpayments/config");
@@ -52,10 +66,55 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open || !cfg?.enabled) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+    if (!getToken()) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    const usd = Number(String(amount).replace(",", "."));
+    if (!Number.isFinite(usd) || usd <= 0) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const t = setTimeout(() => {
+      setPreviewLoading(true);
+      void (async () => {
+        const r = await apiFetch<DepositPreview>("/api/nowpayments/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amountUsd: usd,
+            promoCode: promo.trim() || undefined,
+          }),
+        });
+        if (cancelled) return;
+        setPreviewLoading(false);
+        if (r.ok && r.data) setPreview(r.data);
+        else setPreview(null);
+      })();
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [open, cfg?.enabled, amount, promo]);
+
   if (!open) return null;
 
   const minUsd = cfg?.minUsd ?? 10;
-  const rubPer = cfg?.rubPerUsd ?? 95;
+  /** Тільки з відповіді `/api/nowpayments/config` — без «стрибка» після завантаження не показуємо прев’ю в ₽. */
+  const rubPerServer = cfg?.rubPerUsd;
   const cryptos = cfg?.cryptos?.length ? cfg.cryptos : [];
 
   async function submit() {
@@ -102,7 +161,16 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
     }
   }
 
-  const previewRub = Math.floor(Number(amount.replace(",", ".")) * rubPer) || 0;
+  const parsedUsd = Number(String(amount).replace(",", "."));
+  const guestPreviewRub =
+    rubPerServer != null && Number.isFinite(parsedUsd) && parsedUsd > 0
+      ? Math.floor(parsedUsd * rubPerServer)
+      : null;
+
+  function rateSourceLabel(src?: string | null) {
+    if (src === "admin") return "налаштування адміна";
+    return "сервер";
+  }
 
   return (
     <div
@@ -149,7 +217,7 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
             </h2>
             <p className="mb-5 text-[11px] text-zinc-500">
               Оплата через NOWPayments. Минимум <span className="font-mono text-zinc-400">{minUsd} USD</span>.
-              Зачисление на баланс в ₽ (курс задаётся на сервере).
+              Зачисление в ₽ по курсу, який задає адмін (Адмінка → Інтерфейс / site-ui).
             </p>
 
             {err ? (
@@ -190,46 +258,90 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                   })}
                 </div>
 
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                  <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Сумма (USD)</span>
-                    <div className="flex rounded-xl border border-cb-stroke/80 bg-black/50">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="min-w-0 flex-1 bg-transparent px-3 py-2.5 font-mono text-sm text-white"
-                        placeholder={`мин. ${minUsd}`}
-                      />
-                      <span className="flex items-center pr-3 font-mono text-xs text-zinc-500">USD</span>
-                    </div>
-                    <span className="text-[10px] text-zinc-600">
-                      ≈ <span className="font-mono text-zinc-400">{previewRub}</span> ₽ без бонуса
-                    </span>
-                  </label>
-                  <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Промокод</span>
-                    <div className="flex rounded-xl border border-cb-stroke/80 bg-black/50">
-                      <span className="flex items-center pl-3 text-zinc-600" aria-hidden>
-                        %
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        Сумма (USD)
                       </span>
-                      <input
-                        value={promo}
-                        onChange={(e) => setPromo(e.target.value)}
-                        className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-white placeholder:text-zinc-600"
-                        placeholder="необязательно"
-                      />
+                      <div className="flex h-11 items-stretch rounded-xl border border-cb-stroke/80 bg-black/50">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="min-w-0 flex-1 bg-transparent px-3 font-mono text-sm text-white"
+                          placeholder={`мин. ${minUsd}`}
+                        />
+                        <span className="flex items-center pr-3 font-mono text-xs text-zinc-500">USD</span>
+                      </div>
                     </div>
-                  </label>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void submit()}
-                    className="shrink-0 rounded-xl bg-gradient-to-r from-red-800 to-cb-flame px-6 py-3 text-[12px] font-black uppercase tracking-widest text-white shadow-[0_8px_28px_rgba(255,49,49,0.3)] transition hover:brightness-110 disabled:opacity-45 sm:py-3.5"
-                  >
-                    {busy ? "…" : "Пополнить"}
-                  </button>
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        Промокод
+                      </span>
+                      <div className="flex h-11 items-stretch rounded-xl border border-cb-stroke/80 bg-black/50">
+                        <span className="flex items-center pl-3 text-zinc-600" aria-hidden>
+                          %
+                        </span>
+                        <input
+                          value={promo}
+                          onChange={(e) => setPromo(e.target.value)}
+                          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white placeholder:text-zinc-600"
+                          placeholder="необязательно"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void submit()}
+                      className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-red-800 to-cb-flame px-5 text-[11px] font-black uppercase tracking-widest text-white shadow-[0_8px_28px_rgba(255,49,49,0.3)] transition hover:brightness-110 disabled:opacity-45 sm:min-w-[140px] sm:px-6"
+                    >
+                      {busy ? "…" : "Пополнить"}
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-[10px] text-zinc-600">
+                    {preview && !previewLoading ? (
+                      <>
+                        <p>
+                          База:{" "}
+                          <span className="font-mono text-zinc-400">{preview.creditRubBase}</span> ₽ · курс{" "}
+                          <span className="font-mono text-zinc-500">{preview.rubPerUsd.toFixed(2)}</span> ₽/USD (
+                          {rateSourceLabel(preview.rubRateSource)})
+                        </p>
+                        {preview.bonusPercent > 0 ? (
+                          <p className="text-emerald-200/90">
+                            Бонус по промокоду +{preview.bonusPercent}%:{" "}
+                            <span className="font-mono">+{preview.bonusRub}</span> ₽
+                          </p>
+                        ) : null}
+                        <p className="font-medium text-zinc-300">
+                          Итого на баланс:{" "}
+                          <span className="font-mono text-white">{preview.totalRub}</span> ₽
+                        </p>
+                        {preview.promoError ? (
+                          <p className="text-amber-200/90">{preview.promoError}</p>
+                        ) : null}
+                      </>
+                    ) : previewLoading ? (
+                      <p className="text-zinc-500">Расчёт суммы…</p>
+                    ) : guestPreviewRub != null && rubPerServer != null ? (
+                      <p>
+                        ≈ <span className="font-mono text-zinc-400">{guestPreviewRub}</span> ₽ без бонуса (войдите,
+                        чтобы увидеть итог с промокодом). Курс{" "}
+                        <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span> ₽/USD (
+                        {rateSourceLabel(cfg?.rubRateSource)})
+                      </p>
+                    ) : rubPerServer != null ? (
+                      <p>
+                        Курс <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span> ₽/USD (
+                        {rateSourceLabel(cfg?.rubRateSource)}). Введите сумму в USD.
+                      </p>
+                    ) : (
+                      <p className="text-zinc-600">Загрузка курса…</p>
+                    )}
+                  </div>
                 </div>
 
                 <p className="mt-5 text-[10px] leading-relaxed text-zinc-600">

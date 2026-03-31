@@ -6,11 +6,13 @@ import { apiFetch } from "@/lib/api";
 type SiteUi = {
   homeCaseImageScale: number;
   homeSkinImageScale: number;
+  rubPerUsd: number;
 };
 
 export default function AdminSiteUiPage() {
   const [homeCase, setHomeCase] = useState("100");
   const [homeSkin, setHomeSkin] = useState("100");
+  const [rubPerUsd, setRubPerUsd] = useState("95");
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export default function AdminSiteUiPage() {
     const d = r.data!;
     setHomeCase(String(d.homeCaseImageScale));
     setHomeSkin(String(d.homeSkinImageScale));
+    setRubPerUsd(String(d.rubPerUsd ?? 95));
     setErr(null);
   }, []);
 
@@ -48,10 +51,11 @@ export default function AdminSiteUiPage() {
       180,
       Math.max(40, Math.round(Number(homeSkin) || 100)),
     );
+    const rub = Math.min(500, Math.max(1, Math.round(Number(rubPerUsd) || 95)));
     const r = await apiFetch<SiteUi>("/api/admin/site-ui", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ homeCaseImageScale, homeSkinImageScale }),
+      body: JSON.stringify({ homeCaseImageScale, homeSkinImageScale, rubPerUsd: rub }),
     });
     setSaving(false);
     if (!r.ok) {
@@ -66,11 +70,12 @@ export default function AdminSiteUiPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Картки на главной</h1>
+        <h1 className="text-2xl font-bold text-white">Интерфейс и пополнение</h1>
         <p className="mt-2 max-w-xl text-sm text-zinc-400">
-          Глобальный множитель для карточек на главной (каталог и «Рекомендуемые»): 40–180%, 100 =
-          без изменений. Свой масштаб каждой коробки/скина на главной — в редакторе кейса («Главная —
-          карточка в каталоге»); страница открытия кейса настраивается отдельно в том же редакторе.
+          Масштабы карточек на главной и курс USD→₽ для крипто-пополнения (NOWPayments). Курс хранится в{" "}
+          <span className="font-mono text-zinc-300">siteUi.json</span>; значение из{" "}
+          <span className="font-mono text-zinc-300">NOWPAYMENTS_RUB_PER_USD</span> в .env подставляется только
+          если в файле курс ещё не задан.
         </p>
       </div>
 
@@ -84,6 +89,26 @@ export default function AdminSiteUiPage() {
         <p className="text-sm text-zinc-500">Загрузка…</p>
       ) : (
         <div className="grid max-w-md gap-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Крипто-пополнение</h2>
+            <label className="mt-3 block space-y-1">
+              <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Рублей за 1 USD (зачисление на баланс)
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={rubPerUsd}
+                onChange={(e) => setRubPerUsd(e.target.value)}
+                className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+              />
+            </label>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-white">Картки на главной</h2>
+          </div>
           <label className="block space-y-1">
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
               Масштаб изображения коробки на главной (%)

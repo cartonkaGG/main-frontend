@@ -59,6 +59,9 @@ export function AdminSubNav() {
           <Link href="/admin/users" className={linkClass}>
             Пользователи
           </Link>
+          <Link href="/admin/deposits" className={linkClass}>
+            Пополнения
+          </Link>
           <Link href="/admin/audit-logs" className={linkClass}>
             Логи админов
           </Link>
