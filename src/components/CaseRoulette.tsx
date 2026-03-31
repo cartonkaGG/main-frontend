@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getRouletteSoundMuted,
   setRouletteSoundMuted,
@@ -18,8 +18,25 @@ export type RouletteItem = {
 const CARD_STEP = 136;
 const HALF_CARD = 64;
 const TRACK_PAD = 16;
-const REPEAT = 48;
 const SPIN_ROUNDS = 26;
+
+/**
+ * Раніше стрічка була ~48×N карток (сотні DOM + Image) — сильно лагало.
+ * Префікс має бути кратний N: слот i показує items[i % N], тож зсув на H дає той самий скін лише якщо H % N === 0.
+ */
+const ROULETTE_STRIP_HEAD_MIN = 14;
+const ROULETTE_STRIP_TAIL_SLOTS = 12;
+
+/** Кількість «порожніх» слотів на початку стрічки (округлено вгору до кратного N). */
+export function rouletteStripHeadSlots(n: number): number {
+  if (n <= 0) return 0;
+  return Math.ceil(ROULETTE_STRIP_HEAD_MIN / n) * n;
+}
+
+export function rouletteStripSlotCount(n: number): number {
+  if (n <= 0) return 0;
+  return rouletteStripHeadSlots(n) + n * (SPIN_ROUNDS + 1) + ROULETTE_STRIP_TAIL_SLOTS;
+}
 
 /** Тривалість основної прокрутки (очікування API — окремо, без анімації стрічки). */
 export const ROULETTE_SPIN_DURATION_MS = 5500;
@@ -67,7 +84,7 @@ export function normRarity(raw: string): string {
   return r;
 }
 
-function RouletteCard({
+const RouletteCard = memo(function RouletteCard({
   item,
   isWinner,
 }: {
@@ -79,8 +96,10 @@ function RouletteCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-500 ease-out will-change-transform ${fill} ${
-        isWinner ? "z-10 scale-[1.12] shadow-[0_0_28px_rgba(255,49,49,0.35)] sm:scale-[1.14]" : "z-0 scale-100"
+      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-500 ease-out ${fill} ${
+        isWinner
+          ? "z-10 scale-[1.12] shadow-[0_0_28px_rgba(255,49,49,0.35)] will-change-transform sm:scale-[1.14]"
+          : "z-0 scale-100"
       }`}
     >
       <div className="relative z-[1] flex h-full min-h-0 flex-col p-1.5 pb-1">
@@ -104,7 +123,7 @@ function RouletteCard({
       <div className={`absolute bottom-0 left-0 right-0 z-[2] h-1.5 ${bar}`} />
     </div>
   );
-}
+});
 
 type Props = {
   items: RouletteItem[];
@@ -148,7 +167,7 @@ export function CaseRoulette({
 
   const strip = useMemo(() => {
     if (!items.length) return [];
-    const len = Math.max(items.length * REPEAT, items.length * (SPIN_ROUNDS + 4));
+    const len = rouletteStripSlotCount(items.length);
     return Array.from({ length: len }, (_, i) => ({
       ...items[i % items.length],
       key: i,
@@ -158,46 +177,79 @@ export function CaseRoulette({
   useLayoutEffect(() => {
     if (!viewportRef.current || !items.length) return;
 
-    if (spinWaiting) {
-      const vw = viewportRef.current.clientWidth;
-      const idleIdx = items.length * 3;
-      setTransitionMs(0);
-      setTx(vw / 2 - HALF_CARD - TRACK_PAD - idleIdx * CARD_STEP);
-      return;
-    }
+    let cancelled = false;
+    let rafRetry: number | null = null;
+    let rafSpinOuter: number | null = null;
+    let rafSpinInner: number | null = null;
+    let attempts = 0;
 
-    if (landOnIndex == null) {
-      const vw = viewportRef.current.clientWidth;
-      const idleIdx = items.length * 3;
-      setTransitionMs(0);
-      setTx(vw / 2 - HALF_CARD - TRACK_PAD - idleIdx * CARD_STEP);
-      landedRef.current = false;
-      return;
-    }
-
-    if (landEpoch === 0) {
-      return;
-    }
-
-    landedRef.current = false;
-
-    const vw = viewportRef.current.clientWidth;
-    const n = items.length;
-    const finalSlot = SPIN_ROUNDS * n + landOnIndex;
-    const endTx = vw / 2 - HALF_CARD - TRACK_PAD - finalSlot * CARD_STEP;
-    const startTx = endTx + START_OFFSET_X;
-
-    setTransitionMs(0);
-    setTx(startTx);
-
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTransitionMs(ROULETTE_SPIN_DURATION_MS);
-        setTx(endTx);
+    const runSpinRaf = (endTx: number) => {
+      rafSpinOuter = requestAnimationFrame(() => {
+        if (cancelled) return;
+        rafSpinInner = requestAnimationFrame(() => {
+          if (cancelled) return;
+          setTransitionMs(ROULETTE_SPIN_DURATION_MS);
+          setTx(endTx);
+        });
       });
-    });
+    };
 
-    return () => cancelAnimationFrame(id);
+    const layout = (vw: number) => {
+      if (cancelled) return;
+      const n = items.length;
+      const head = rouletteStripHeadSlots(n);
+      if (spinWaiting) {
+        const idleIdx = n * 3 + head;
+        setTransitionMs(0);
+        setTx(vw / 2 - HALF_CARD - TRACK_PAD - idleIdx * CARD_STEP);
+        return;
+      }
+
+      if (landOnIndex == null) {
+        const idleIdx = n * 3 + head;
+        setTransitionMs(0);
+        setTx(vw / 2 - HALF_CARD - TRACK_PAD - idleIdx * CARD_STEP);
+        landedRef.current = false;
+        return;
+      }
+
+      landedRef.current = false;
+
+      const finalSlot = SPIN_ROUNDS * n + landOnIndex + head;
+      const endTx = vw / 2 - HALF_CARD - TRACK_PAD - finalSlot * CARD_STEP;
+      const startTx = endTx + START_OFFSET_X;
+
+      setTransitionMs(0);
+      setTx(startTx);
+      runSpinRaf(endTx);
+    };
+
+    const tryLayout = () => {
+      if (cancelled) return;
+      const vw = viewportRef.current?.clientWidth ?? 0;
+      if (vw >= 8) {
+        layout(vw);
+        return;
+      }
+      if (attempts++ > 24) {
+        const fallback =
+          typeof window !== "undefined"
+            ? Math.min(520, Math.max(280, Math.floor(window.innerWidth * 0.85)))
+            : 400;
+        layout(fallback);
+        return;
+      }
+      rafRetry = requestAnimationFrame(tryLayout);
+    };
+
+    tryLayout();
+
+    return () => {
+      cancelled = true;
+      if (rafRetry != null) cancelAnimationFrame(rafRetry);
+      if (rafSpinOuter != null) cancelAnimationFrame(rafSpinOuter);
+      if (rafSpinInner != null) cancelAnimationFrame(rafSpinInner);
+    };
   }, [items, spinWaiting, landOnIndex, landEpoch]);
 
   function onTransitionEnd(e: React.TransitionEvent) {
@@ -216,8 +268,9 @@ export function CaseRoulette({
   }
 
   const n = items.length;
+  const headSlots = rouletteStripHeadSlots(n);
   const winnerStripIndex =
-    landOnIndex != null && n > 0 ? SPIN_ROUNDS * n + landOnIndex : -1;
+    landOnIndex != null && n > 0 ? SPIN_ROUNDS * n + landOnIndex + headSlots : -1;
 
   return (
     <div className="relative w-full">
@@ -229,13 +282,13 @@ export function CaseRoulette({
           setRouletteSoundMuted(next);
         }}
         className="absolute -right-1 -top-10 z-30 flex items-center gap-1.5 rounded-lg border border-cb-stroke/70 bg-[#0a0e14]/90 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 shadow-md transition hover:border-zinc-600 hover:text-zinc-200 sm:-top-11 sm:text-xs"
-        title={soundMuted ? "Увімкнути звук рулетки" : "Вимкнути звук рулетки"}
+        title={soundMuted ? "Включить звук рулетки" : "Выключить звук рулетки"}
         aria-pressed={!soundMuted}
       >
         <span className="text-base leading-none" aria-hidden>
           {soundMuted ? "🔇" : "🔊"}
         </span>
-        <span className="hidden sm:inline">{soundMuted ? "Звук вимк." : "Звук увімк."}</span>
+        <span className="hidden sm:inline">{soundMuted ? "Звук выкл." : "Звук вкл."}</span>
       </button>
 
       <div

@@ -14,12 +14,13 @@ function splitItemDisplay(item: string): { weapon: string; skin: string } {
   };
 }
 
-/** Портретна картка: зображення ~верхні 60%, текст по центру внизу; тонкий розділювач між картками */
+/** Портретная карточка: изображение ~верхние 60%, текст по центру внизу; тонкий разделитель между карточками */
 function DropRow({ d }: { d: LiveDrop }) {
   const rk = normRarity(d.rarity);
   const bar = rarityBar[rk] || rarityBar.common;
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   const { weapon, skin } = splitItemDisplay(d.item);
+  const fromUpgrade = d.source === "upgrade";
 
   return (
     <div
@@ -47,6 +48,11 @@ function DropRow({ d }: { d: LiveDrop }) {
           )}
         </div>
         <div className="mt-auto w-full space-y-0.5 pt-1 text-center">
+          {fromUpgrade ? (
+            <p className="mb-1 text-[8px] font-black uppercase tracking-[0.14em] text-cb-flame/95">
+              Выпало в апгрейде
+            </p>
+          ) : null}
           <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-[11px]">
             {weapon || d.item}
           </p>
@@ -72,7 +78,7 @@ export function LiveDropsRail({ drops, children }: Props) {
         <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-1.5 sm:px-2 sm:py-2">
           {drops.length === 0 ? (
             <p className="p-3 text-center text-[11px] leading-relaxed text-zinc-500">
-              Пока никто не открыл кейс. Откройте свой — дроп появится здесь в реальном времени.
+              Пока нет дропов из кейсов и апгрейдов. Откройте кейс или выиграйте апгрейд — запись появится здесь в реальном времени.
             </p>
           ) : (
             <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-black/30">
@@ -90,7 +96,7 @@ export function LiveDropsRail({ drops, children }: Props) {
           <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-10 bg-gradient-to-l from-[#020204] to-transparent" />
           {drops.length === 0 ? (
             <p className="px-4 text-center text-[11px] text-zinc-500">
-              Лента пуста — откройте кейс.
+              Лента пуста — откройте кейс или выиграйте апгрейд.
             </p>
           ) : (
             <div className="flex overflow-hidden px-3">
@@ -98,6 +104,7 @@ export function LiveDropsRail({ drops, children }: Props) {
                 {loop.map((d, i) => {
                   const { weapon, skin } = splitItemDisplay(d.item);
                   const label = skin ? `${weapon} — ${skin}` : d.item;
+                  const fromUpgrade = d.source === "upgrade";
                   return (
                     <div
                       key={`${d.id}-${i}`}
@@ -109,6 +116,11 @@ export function LiveDropsRail({ drops, children }: Props) {
                       <span className="font-semibold text-cb-flame">{d.user}</span>
                       <span className="text-zinc-600">→</span>
                       <span className="text-zinc-200">{label}</span>
+                      {fromUpgrade ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-cb-flame/90">
+                          · апгрейд
+                        </span>
+                      ) : null}
                     </div>
                   );
                 })}

@@ -27,7 +27,7 @@ export default function AdminAuditLogsPage() {
     const r = await apiFetch<{ logs: AdminLogRow[] }>("/api/admin/audit-logs?limit=300");
     setLoading(false);
     if (!r.ok) {
-      setErr(r.error || "Не вдалося завантажити");
+      setErr(r.error || "Не удалось загрузить");
       setLogs([]);
       return;
     }
@@ -42,9 +42,9 @@ export default function AdminAuditLogsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Логи адмінів</h1>
+          <h1 className="text-2xl font-bold text-white">Логи админов</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Баланс, ролі, кейси, RTP, промокоди, налаштування головної — лише після збереження на сервері.
+            Баланс, роли, кейсы, RTP, промокоды, настройки главной — только после сохранения на сервере.
           </p>
         </div>
         <button
@@ -53,7 +53,7 @@ export default function AdminAuditLogsPage() {
           disabled={loading}
           className="rounded-xl border border-cb-stroke bg-black/40 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:border-amber-500/50 hover:text-white disabled:opacity-50"
         >
-          {loading ? "…" : "Оновити"}
+          {loading ? "…" : "Обновить"}
         </button>
       </div>
 
@@ -66,10 +66,10 @@ export default function AdminAuditLogsPage() {
           <thead className="border-b border-cb-stroke bg-black/50 text-[10px] uppercase tracking-wider text-zinc-500">
             <tr>
               <th className="px-3 py-2.5">Час</th>
-              <th className="px-3 py-2.5">Адмін</th>
-              <th className="px-3 py-2.5">Дія</th>
-              <th className="px-3 py-2.5">Ціль</th>
-              <th className="px-3 py-2.5">Деталі</th>
+              <th className="px-3 py-2.5">Админ</th>
+              <th className="px-3 py-2.5">Действие</th>
+              <th className="px-3 py-2.5">Цель</th>
+              <th className="px-3 py-2.5">Детали</th>
               <th className="px-3 py-2.5">IP</th>
             </tr>
           </thead>
@@ -77,7 +77,7 @@ export default function AdminAuditLogsPage() {
             {logs.length === 0 && !loading ? (
               <tr>
                 <td colSpan={6} className="px-3 py-8 text-center text-zinc-600">
-                  Поки порожньо. Після дій адміна записи з’являться тут.
+                  Пока пусто. После действий админа записи появятся здесь.
                 </td>
               </tr>
             ) : (

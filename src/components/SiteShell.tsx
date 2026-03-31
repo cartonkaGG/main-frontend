@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { apiFetch, clearToken, getToken, steamLoginUrl } from "@/lib/api";
 import { formatRub } from "@/lib/money";
 import { useLiveDrops } from "@/hooks/useLiveDrops";
@@ -22,24 +22,38 @@ type Props = {
   children: React.ReactNode;
 };
 
-/** Іконка «апгрейд»: три шеврони вгору в стилі сайту (cb-flame + приглушений «ободок»). */
-function UpgradeNavIcon({ className }: { className?: string }) {
-  const muted = "#6B565C";
+/** Иконка апгрейда: три равномерных шеврона вверх, по центру viewBox (cb-flame по центру). */
+function UpgradeNavIcon({
+  className,
+  filterId = "cb-upgrade-chevron-glow",
+}: {
+  className?: string;
+  filterId?: string;
+}) {
+  const muted = "#5c4a52";
   const flame = "#ff3131";
-  const stroke = 2.25;
+  const stroke = 2;
+  const cx = 16;
+  const half = 10;
+  const xl = cx - half;
+  const xr = cx + half;
+  /** Вершины и основания без перекрытий, шаг 7 по Y */
+  const peaks = [5, 12, 19] as const;
+  const bases = [10, 17, 24] as const;
   return (
     <svg
       className={className}
-      width={36}
-      height={32}
-      viewBox="0 0 36 32"
+      width={32}
+      height={28}
+      viewBox="0 0 32 28"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
+      style={{ display: "block" }}
     >
       <defs>
-        <filter id="cb-upgrade-chevron-glow" x="-35%" y="-35%" width="170%" height="170%">
-          <feGaussianBlur stdDeviation="1.2" result="b" />
+        <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="0.9" result="b" />
           <feMerge>
             <feMergeNode in="b" />
             <feMergeNode in="SourceGraphic" />
@@ -47,25 +61,25 @@ function UpgradeNavIcon({ className }: { className?: string }) {
         </filter>
       </defs>
       <path
-        d="M6 20 L18 12 L30 20"
+        d={`M${xl} ${bases[2]} L${cx} ${peaks[2]} L${xr} ${bases[2]}`}
         stroke={muted}
-        strokeOpacity={0.9}
+        strokeOpacity={0.95}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M6 14 L18 6 L30 14"
+        d={`M${xl} ${bases[1]} L${cx} ${peaks[1]} L${xr} ${bases[1]}`}
         stroke={flame}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter="url(#cb-upgrade-chevron-glow)"
+        filter={`url(#${filterId})`}
       />
       <path
-        d="M6 8 L18 0 L30 8"
+        d={`M${xl} ${bases[0]} L${cx} ${peaks[0]} L${xr} ${bases[0]}`}
         stroke={muted}
-        strokeOpacity={0.9}
+        strokeOpacity={0.95}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -80,8 +94,8 @@ function SupportFabLink() {
   return (
     <Link
       href="/support"
-      aria-label="Підтримка"
-      title="Підтримка"
+      aria-label="Поддержка"
+      title="Поддержка"
       className="fixed bottom-4 right-4 z-[100] flex h-14 w-14 items-center justify-center rounded-full border border-sky-500/40 bg-gradient-to-br from-sky-600/95 via-slate-900 to-slate-950 text-white shadow-[0_0_28px_rgba(56,189,248,0.35)] transition hover:border-sky-400/70 hover:brightness-110 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sky-400/50"
     >
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden className="text-sky-100">
@@ -151,6 +165,9 @@ export function SiteShell({ children }: Props) {
   }
 
   const balanceStr = me ? formatRub(me.balance) : null;
+  const pathname = usePathname();
+  const upgradeActive = pathname.startsWith("/upgrade");
+  const upgradeFilterId = useId().replace(/:/g, "");
 
   return (
     <div className="flex min-h-screen flex-col lg:h-full lg:min-h-0 lg:overflow-hidden">
@@ -171,10 +188,25 @@ export function SiteShell({ children }: Props) {
         <nav className="flex flex-1 items-center justify-center sm:flex-none sm:justify-start">
           <Link
             href="/upgrade"
-            className="group flex flex-col items-center gap-0.5 rounded-lg px-2 py-0.5 outline-none transition hover:opacity-100 focus-visible:ring-2 focus-visible:ring-cb-flame/45 focus-visible:ring-offset-2 focus-visible:ring-offset-cb-void sm:px-3"
+            className={`group relative flex items-center gap-2.5 overflow-hidden rounded-2xl border px-2.5 py-2 outline-none transition sm:gap-3 sm:px-3.5 sm:py-2.5 ${
+              upgradeActive
+                ? "border-cb-flame/50 bg-gradient-to-r from-red-950/55 via-cb-panel/90 to-zinc-950/95 shadow-[0_0_22px_rgba(255,49,49,0.2),inset_0_1px_0_rgba(255,49,49,0.12)]"
+                : "border-cb-stroke/80 bg-gradient-to-br from-zinc-950/90 via-cb-panel/45 to-black/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:border-cb-flame/40 hover:shadow-[0_0_18px_rgba(255,49,49,0.14)]"
+            } focus-visible:ring-2 focus-visible:ring-cb-flame/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cb-void`}
           >
-            <UpgradeNavIcon className="h-7 w-8 shrink-0 transition group-hover:drop-shadow-[0_0_12px_rgba(255,49,49,0.45)] sm:h-8 sm:w-9" />
-            <span className="bg-gradient-to-r from-zinc-200 via-cb-flame to-red-300 bg-clip-text text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-transparent sm:text-[11px]">
+            <span
+              className={`relative flex h-9 w-9 shrink-0 items-center justify-center leading-none rounded-xl border transition sm:h-10 sm:w-10 ${
+                upgradeActive
+                  ? "border-cb-flame/45 bg-gradient-to-b from-cb-flame/25 to-red-950/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  : "border-cb-stroke/70 bg-black/50 group-hover:border-cb-flame/35 group-hover:bg-cb-flame/10"
+              }`}
+            >
+              <UpgradeNavIcon
+                filterId={`cb-upg-${upgradeFilterId}`}
+                className="h-7 w-8 shrink-0 transition group-hover:drop-shadow-[0_0_10px_rgba(255,49,49,0.5)] sm:h-8 sm:w-[2.286rem]"
+              />
+            </span>
+            <span className="min-w-0 bg-gradient-to-r from-white via-zinc-100 to-zinc-500 bg-clip-text pr-0.5 text-sm font-black uppercase tracking-wide text-transparent sm:text-[15px]">
               Апгрейд
             </span>
           </Link>
@@ -288,7 +320,7 @@ export function SiteShell({ children }: Props) {
                       className="block px-4 py-2.5 text-sm text-sky-300/95 hover:bg-sky-950/30 hover:text-sky-200"
                       onClick={() => setMenuOpen(false)}
                     >
-                      Панель підтримки
+                      Панель поддержки
                     </Link>
                   )}
                   {me.isAdmin && (

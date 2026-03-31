@@ -26,6 +26,34 @@ type CatalogItem = {
   image: string | null;
 };
 
+/** Зведення взносу — «HUD» блок без гучних градієнтів */
+const UPGRADE_SUMMARY_BOX =
+  "mx-auto mb-3 w-full max-w-[280px] rounded-xl border border-zinc-700/40 bg-gradient-to-b from-zinc-900/85 via-zinc-950/80 to-black/75 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.35)] sm:max-w-xs";
+const UPGRADE_SUMMARY_ROW = "flex items-center justify-between gap-3 py-1.5";
+const UPGRADE_SUMMARY_LABEL = "text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500";
+const UPGRADE_SUMMARY_VALUE =
+  "text-right font-mono text-[13px] font-bold tabular-nums text-emerald-400/95 [text-shadow:0_0_18px_rgba(52,211,153,0.15)] sm:text-sm";
+const UPGRADE_SUMMARY_VALUE_MUTED = "text-right font-mono text-xs font-semibold tabular-nums text-cyan-400/90";
+
+/** Ціна на картці інвентаря / каталогу */
+const UPGRADE_PRICE_CHIP =
+  "mt-0.5 flex w-full items-center justify-center rounded-md border border-zinc-600/45 bg-black/50 py-1 px-1.5 font-mono text-[9px] font-semibold tabular-nums text-emerald-300/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:text-[10px]";
+const UPGRADE_PRICE_CHIP_INLINE =
+  "flex w-full items-center justify-center rounded-md border border-zinc-600/45 bg-black/50 py-1 px-1.5 font-mono text-[9px] font-semibold tabular-nums text-emerald-300/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:text-[10px]";
+
+/** Мітка біля слайдера балансу */
+const UPGRADE_BOOST_BADGE =
+  "inline-flex shrink-0 items-center rounded-md border border-cyan-500/25 bg-cyan-950/20 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-cyan-300/95";
+
+/** Ціна обраної цілі */
+const UPGRADE_TARGET_PRICE_WRAP =
+  "mt-2 flex flex-col items-center gap-1 rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-950/35 via-black/50 to-black/70 px-4 py-2.5 shadow-[0_0_28px_rgba(245,158,11,0.07),inset_0_1px_0_rgba(255,255,255,0.05)]";
+const UPGRADE_TARGET_PRICE_LABEL = "text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-200/45";
+const UPGRADE_TARGET_PRICE_ROW = "flex items-baseline justify-center gap-1";
+const UPGRADE_TARGET_PRICE_NUM =
+  "font-mono text-lg font-bold tabular-nums text-amber-100 sm:text-xl";
+const UPGRADE_TARGET_PRICE_CUR = "text-sm font-medium text-amber-500/75";
+
 const RARITY_CARD_BORDER: Record<string, string> = {
   common: "border-zinc-500/55",
   uncommon: "border-emerald-500/50",
@@ -217,8 +245,8 @@ function UpgradeGauge({
               : "transform 0.35s ease-out",
           }}
         >
-          <div className="absolute top-[8%] flex h-[34%] w-2.5 items-end justify-center sm:w-3">
-            <div className="h-full w-full rounded-full bg-gradient-to-b from-white via-red-200 to-cb-flame shadow-[0_0_18px_rgba(255,70,70,1)] ring-2 ring-white/30" />
+          <div className="absolute top-[8%] flex h-[34%] w-2 items-end justify-center sm:w-2.5">
+            <div className="h-full w-full rounded-full bg-gradient-to-b from-white via-red-200 to-cb-flame shadow-[0_0_14px_rgba(255,70,70,0.95)] ring-1 ring-white/30" />
           </div>
         </div>
         <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center">
@@ -576,24 +604,33 @@ export default function UpgradePage() {
                 <h3 className="mb-2 text-center text-[12px] font-bold uppercase tracking-wider text-zinc-500">
                   Выберите до 6 предметов для апгрейда
                 </h3>
-                <p className="mb-3 text-center text-[11px] leading-relaxed text-zinc-400">
-                  Предметы: <span className="font-mono text-zinc-200">{formatRub(inputSum)} ₽</span>
+                <div className={UPGRADE_SUMMARY_BOX}>
                   {balanceBoostRub > 0 ? (
                     <>
-                      {" "}
-                      + баланс <span className="font-mono text-zinc-200">{formatRub(balanceBoostRub)} ₽</span>
+                      <div className={`${UPGRADE_SUMMARY_ROW} border-b border-zinc-800/70 pb-2`}>
+                        <span className={UPGRADE_SUMMARY_LABEL}>Предметы</span>
+                        <span className={UPGRADE_SUMMARY_VALUE}>{formatRub(inputSum)} ₽</span>
+                      </div>
+                      <div className={`${UPGRADE_SUMMARY_ROW} border-b border-zinc-800/70`}>
+                        <span className={UPGRADE_SUMMARY_LABEL}>Баланс</span>
+                        <span className={UPGRADE_SUMMARY_VALUE_MUTED}>+{formatRub(balanceBoostRub)} ₽</span>
+                      </div>
                     </>
                   ) : null}
-                  <br />
-                  Всего в апгрейд:{" "}
-                  <span className="font-mono font-semibold text-cb-flame">{formatRub(stakeTotal)} ₽</span>
-                  {selected.size > 0 ? (
-                    <span className="text-zinc-500">
-                      {" "}
-                      · {selected.size} шт.
+                  <div
+                    className={`flex items-start justify-between gap-3 ${balanceBoostRub > 0 ? "pt-2" : ""}`}
+                  >
+                    <div className="min-w-0 pt-0.5">
+                      <div className={UPGRADE_SUMMARY_LABEL}>Всего в апгрейд</div>
+                      {selected.size > 0 ? (
+                        <p className="mt-0.5 text-[10px] text-zinc-600">{selected.size} шт.</p>
+                      ) : null}
+                    </div>
+                    <span className={`${UPGRADE_SUMMARY_VALUE} text-base sm:text-[15px]`}>
+                      {formatRub(stakeTotal)} ₽
                     </span>
-                  ) : null}
-                </p>
+                  </div>
+                </div>
                 <div className="flex min-h-[160px] flex-1 flex-wrap content-center justify-center gap-2 rounded-xl border border-dashed border-cb-stroke/60 bg-black/40 p-3">
                   {selectedItems.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-6 text-zinc-600">
@@ -619,9 +656,9 @@ export default function UpgradePage() {
                   )}
                 </div>
                 <div className="mt-4 border-t border-cb-stroke/50 pt-3">
-                  <div className="mb-2 flex items-center justify-between text-[11px] text-zinc-500">
+                  <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-zinc-500">
                     <span>Добавить баланс к шансу</span>
-                    <span className="font-mono text-cb-flame">{formatRub(balanceBoostRub)} ₽</span>
+                    <span className={UPGRADE_BOOST_BADGE}>{formatRub(balanceBoostRub)} ₽</span>
                   </div>
                   <input
                     type="range"
@@ -650,8 +687,8 @@ export default function UpgradePage() {
                     </div>
                     {previewMeta?.cappedChance ? (
                       <p className="text-center text-[10px] leading-snug text-amber-400/90">
-                        шанс на верхній межі ({previewMeta.maxChancePct.toFixed(0)}%): додатковий баланс не збільшує
-                        показаний відсоток
+                        шанс на верхней границе ({previewMeta.maxChancePct.toFixed(0)}%): дополнительный баланс не увеличивает
+                        показанный процент
                       </p>
                     ) : null}
                   </div>
@@ -713,7 +750,13 @@ export default function UpgradePage() {
                   <p className="mt-2 truncate text-center text-[12px] font-medium text-white">{target.name}</p>
                 ) : null}
                 {target ? (
-                  <p className="text-center font-mono text-sm text-cb-flame">{formatRub(target.price)} ₽</p>
+                  <div className={UPGRADE_TARGET_PRICE_WRAP}>
+                    <span className={UPGRADE_TARGET_PRICE_LABEL}>Цена цели</span>
+                    <div className={UPGRADE_TARGET_PRICE_ROW}>
+                      <span className={UPGRADE_TARGET_PRICE_NUM}>{formatRub(target.price)}</span>
+                      <span className={UPGRADE_TARGET_PRICE_CUR}>₽</span>
+                    </div>
+                  </div>
                 ) : null}
                 <div className="mt-4 flex flex-wrap justify-center gap-1.5 border-t border-cb-stroke/50 pt-3">
                   {(
@@ -816,9 +859,9 @@ export default function UpgradePage() {
                           <p className="line-clamp-2 text-[8px] font-medium leading-tight text-zinc-100 sm:text-[9px]">
                             {it.name}
                           </p>
-                          <p className="mt-0.5 font-mono text-[9px] text-cb-flame sm:text-[10px]">
+                          <span className={UPGRADE_PRICE_CHIP}>
                             {formatRub(it.sellPrice)} ₽
-                          </p>
+                          </span>
                         </button>
                       );
                     })}
@@ -843,19 +886,17 @@ export default function UpgradePage() {
                             <Image src={it.image} alt="" fill className="object-contain p-0.5" unoptimized />
                           ) : null}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <p className="truncate text-[11px] text-zinc-100">{it.name}</p>
-                          <p className="font-mono text-[11px] text-cb-flame">{formatRub(it.sellPrice)} ₽</p>
+                          <span className={UPGRADE_PRICE_CHIP_INLINE}>
+                            {formatRub(it.sellPrice)} ₽
+                          </span>
                         </div>
                       </button>
                     );
                   })}
                 </div>
               )}
-              <p className="mt-3 border-t border-cb-stroke/50 pt-2 text-[11px] text-zinc-500">
-                Взнос: <span className="font-mono text-white">{formatRub(stakeTotal)} ₽</span> · выбрано {selected.size}
-                /6
-              </p>
             </div>
 
             <div className={`${panelClass} flex flex-col p-4`}>
@@ -985,9 +1026,9 @@ export default function UpgradePage() {
                         <p className="line-clamp-2 text-[8px] font-medium leading-tight text-zinc-100 sm:text-[9px]">
                           {t.name}
                         </p>
-                        <p className="mt-0.5 font-mono text-[9px] text-cb-flame sm:text-[10px]">
+                        <span className={UPGRADE_PRICE_CHIP}>
                           {formatRub(t.price)} ₽
-                        </p>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -1016,9 +1057,11 @@ export default function UpgradePage() {
                             <span className="flex h-full items-center justify-center text-[10px] text-zinc-600">?</span>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <p className="truncate text-[11px] font-medium text-zinc-100">{t.name}</p>
-                          <p className="font-mono text-[11px] text-cb-flame">{formatRub(t.price)} ₽</p>
+                          <span className={UPGRADE_PRICE_CHIP_INLINE}>
+                            {formatRub(t.price)} ₽
+                          </span>
                         </div>
                       </button>
                     ))}

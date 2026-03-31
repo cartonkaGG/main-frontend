@@ -35,7 +35,7 @@ export default function SupportTicketPage() {
     if (!getToken() || !id) return;
     const r = await apiFetch<{ ticket: Ticket }>(`/api/support/tickets/${encodeURIComponent(id)}`);
     if (!r.ok) {
-      setErr(r.error || "Помилка");
+      setErr(r.error || "Ошибка");
       setTicket(null);
       return;
     }
@@ -55,7 +55,7 @@ export default function SupportTicketPage() {
     <SiteShell>
       <div className="mx-auto max-w-2xl space-y-6 px-4 py-10 sm:px-6">
         <Link href="/support" className="text-sm text-sky-400/90 hover:text-sky-300">
-          ← Усі звернення
+          ← Все обращения
         </Link>
         {err && <p className="text-sm text-red-300">{err}</p>}
         {ticket && (
@@ -65,9 +65,9 @@ export default function SupportTicketPage() {
               <p className="mt-1 text-xs text-zinc-500">
                 Статус:{" "}
                 {ticket.status === "open" ? (
-                  <span className="text-sky-400">відкрите</span>
+                  <span className="text-sky-400">открыто</span>
                 ) : (
-                  <span>закрите</span>
+                  <span>закрыто</span>
                 )}
               </p>
             </div>
@@ -82,7 +82,7 @@ export default function SupportTicketPage() {
                   }`}
                 >
                   <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-wider text-zinc-500">
-                    <span>{m.from === "staff" ? `Підтримка${m.authorName ? `: ${m.authorName}` : ""}` : "Ви"}</span>
+                    <span>{m.from === "staff" ? `Поддержка${m.authorName ? `: ${m.authorName}` : ""}` : "Вы"}</span>
                     <span>{new Date(m.at).toLocaleString()}</span>
                   </div>
                   <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.body}</p>

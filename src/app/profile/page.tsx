@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { normRarity, rarityBar } from "@/components/CaseRoulette";
 import { SiteShell } from "@/components/SiteShell";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { requestAuthModal } from "@/lib/authModal";
 import { formatRub } from "@/lib/money";
 
@@ -24,6 +24,14 @@ type Me = {
   displayName: string;
   avatar: string;
   balance: number;
+  isAdmin?: boolean;
+  isSupportStaff?: boolean;
+  stats?: {
+    casesOpened: number;
+    upgradesDone: number;
+    itemsSold: number;
+    soldTotalRub: number;
+  };
   inventory: {
     itemId: string;
     name: string;
@@ -37,6 +45,7 @@ type Me = {
     image: string | null;
     rarity: string;
     sellPrice: number;
+    source?: "case" | "upgrade" | "inventory";
   };
 };
 
@@ -45,6 +54,7 @@ type BestDrop = {
   image: string | null;
   rarity: string;
   sellPrice: number;
+  source?: "case" | "upgrade" | "inventory";
 };
 
 const rarityClass: Record<string, string> = {
@@ -63,6 +73,9 @@ const rarityClass: Record<string, string> = {
   extraordinary: "border-amber-500/50 bg-amber-950/25 text-amber-200",
   contraband: "border-orange-500/55 bg-orange-950/30 text-orange-200",
 };
+
+const profileCard =
+  "rounded-2xl border border-cb-stroke/60 bg-gradient-to-br from-[#0a0e14]/95 via-cb-panel/40 to-black/80 shadow-[inset_0_1px_0_rgba(255,49,49,0.07),0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-sm";
 
 function ProfileHexBg() {
   return (
@@ -88,6 +101,8 @@ export default function ProfilePage() {
   const [promoBusy, setPromoBusy] = useState(false);
   const [sellAllBusy, setSellAllBusy] = useState(false);
   const [depositNotice, setDepositNotice] = useState<string | null>(null);
+  const [tradeUrl, setTradeUrl] = useState("");
+  const [tradeSavedFlash, setTradeSavedFlash] = useState(false);
 
   const inventorySellTotal = useMemo(
     () => (me?.inventory ?? []).reduce((s, it) => s + (Number(it.sellPrice) || 0), 0),
@@ -113,6 +128,11 @@ export default function ProfilePage() {
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setTradeUrl(localStorage.getItem("cd_trade_url") || "");
+  }, [me?.steamId]);
 
   useEffect(() => {
     load();
@@ -145,6 +165,7 @@ export default function ProfilePage() {
           image: me.bestEverItem.image ?? null,
           rarity: me.bestEverItem.rarity,
           sellPrice: me.bestEverItem.sellPrice,
+          source: me.bestEverItem.source,
         }
       : me.inventory.reduce<BestDrop | null>(
           (acc, it) => {
@@ -155,6 +176,7 @@ export default function ProfilePage() {
                   image: it.image ?? null,
                   rarity: it.rarity,
                   sellPrice: it.sellPrice,
+                  source: "inventory",
                 }
               : acc;
           },
@@ -240,9 +262,25 @@ export default function ProfilePage() {
     window.dispatchEvent(new CustomEvent("cd-balance-updated"));
   }
 
+  function saveTradeUrl() {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("cd_trade_url", tradeUrl.trim());
+    setTradeSavedFlash(true);
+    window.setTimeout(() => setTradeSavedFlash(false), 2500);
+  }
+
+  function logoutProfile() {
+    clearToken();
+    window.location.href = "/";
+  }
+
+  function openTopUp() {
+    window.dispatchEvent(new CustomEvent("cd-open-crypto-topup"));
+  }
+
   return (
     <SiteShell>
-      <div className="relative mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="relative overflow-hidden rounded-[1.5rem] border border-orange-500/25 bg-[#060a12] shadow-[0_0_60px_-20px_rgba(234,88,12,0.35)]">
           <div
             className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-950/35 via-transparent to-orange-950/15"
@@ -275,39 +313,243 @@ export default function ProfilePage() {
 
             {me && (
               <>
-                <div className="mb-10 flex flex-col items-center gap-6 rounded-2xl border border-cb-stroke/50 bg-[#0a1020]/80 p-6 shadow-inner backdrop-blur-sm sm:flex-row sm:items-center sm:gap-8">
-                  <div className="relative shrink-0">
-                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-500/50 to-violet-600/50 opacity-80 blur-sm" />
-                    <div className="relative overflow-hidden rounded-2xl ring-2 ring-orange-500/30">
-                      {me.avatar ? (
-                        <Image
-                          src={me.avatar}
-                          alt=""
-                          width={96}
-                          height={96}
-                          className="h-24 w-24 object-cover"
-                          unoptimized
-                        />
+                {(() => {
+                  const st = me.stats ?? {
+                    casesOpened: 0,
+                    upgradesDone: 0,
+                    itemsSold: 0,
+                    soldTotalRub: 0,
+                  };
+                  const tradeOk = tradeUrl.trim().length > 20;
+                  return (
+                    <div className="mb-10 grid gap-4 lg:grid-cols-2 lg:gap-5">
+                      {/* Trade URL */}
+                      <div className={`${profileCard} flex flex-col p-5 sm:p-6`}>
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                              tradeOk
+                                ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                                : "bg-zinc-800 text-zinc-500 ring-1 ring-cb-stroke/60"
+                            }`}
+                            aria-hidden
+                          >
+                            {tradeOk ? "✓" : "—"}
+                          </span>
+                          <div className="min-w-0">
+                            <h2 className="text-sm font-black uppercase tracking-wide text-white">
+                              Trade URL
+                            </h2>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {tradeOk || tradeSavedFlash
+                                ? "Трейд-ссылка сохранена локально в браузере"
+                                : "Укажите ссылку для обмена (хранится только у вас)"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                          <input
+                            value={tradeUrl}
+                            onChange={(e) => setTradeUrl(e.target.value)}
+                            placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…"
+                            className="min-h-[2.75rem] flex-1 rounded-xl border border-cb-stroke/70 bg-black/40 px-3 py-2 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-600 focus:border-cb-flame/50 focus:outline-none focus:ring-1 focus:ring-cb-flame/30 sm:text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveTradeUrl}
+                            className="shrink-0 rounded-xl border-2 border-cb-flame/60 bg-transparent px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-cb-flame/15"
+                          >
+                            Обновить
+                          </button>
+                        </div>
+                        <a
+                          href="https://steamcommunity.com/my/tradeoffers/privacy#trade_url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-4 inline-flex items-center gap-1.5 text-[11px] text-zinc-500 transition hover:text-cb-flame"
+                        >
+                          <span className="text-cb-flame/80" aria-hidden>
+                            ?
+                          </span>
+                          Где взять trade-ссылку
+                        </a>
+                      </div>
+
+                      {/* Профиль / баланс */}
+                      <div className={`${profileCard} flex flex-col p-5 sm:p-6`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="text-lg opacity-90" aria-hidden>
+                              🎮
+                            </span>
+                            <span className="truncate font-bold text-white">{me.displayName}</span>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            {me.isAdmin ? (
+                              <Link
+                                href="/admin/cases"
+                                className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition hover:text-cb-flame"
+                              >
+                                ⚙ Админ
+                              </Link>
+                            ) : me.isSupportStaff ? (
+                              <Link
+                                href="/admin/support"
+                                className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition hover:text-sky-300"
+                              >
+                                ⚙ Поддержка
+                              </Link>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={logoutProfile}
+                              className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition hover:text-red-400"
+                            >
+                              Выход
+                            </button>
+                          </div>
+                        </div>
+                        <div className="relative mx-auto mt-5 flex justify-center">
+                          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-cb-flame/50 to-orange-600/30 opacity-70 blur-md" />
+                          <div className="relative h-28 w-28 overflow-hidden rounded-full ring-2 ring-cb-flame/45 ring-offset-2 ring-offset-[#060a12] sm:h-32 sm:w-32">
+                            {me.avatar ? (
+                              <Image
+                                src={me.avatar}
+                                alt=""
+                                width={128}
+                                height={128}
+                                className="h-full w-full object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-zinc-900 text-3xl text-zinc-600">
+                                ?
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-cb-stroke/40 pt-4 text-sm">
+                          <span className="text-zinc-500">
+                            Предметов:{" "}
+                            <span className="font-mono font-bold text-white">{me.inventory.length}</span>
+                          </span>
+                          <span className="font-mono text-lg font-black text-white">
+                            {formatRub(me.balance)} ₽
+                          </span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+                          <a
+                            href="#inventory"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 transition hover:text-cb-flame"
+                          >
+                            <span aria-hidden>🕐</span>
+                            Инвентарь ниже
+                          </a>
+                          <button
+                            type="button"
+                            onClick={openTopUp}
+                            className="inline-flex items-center gap-2 rounded-xl border-2 border-cb-flame/70 bg-cb-flame/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-cb-flame transition hover:bg-cb-flame/20"
+                          >
+                            + Пополнить
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Статистика */}
+                      <div className={`${profileCard} p-5 sm:p-6`}>
+                        <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-white">
+                          <span className="text-cb-flame" aria-hidden>
+                            ▤
+                          </span>
+                          Статистика аккаунта
+                        </h2>
+                        <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                          <div className="rounded-xl border border-cb-stroke/50 bg-black/30 py-3">
+                            <div className="text-lg" aria-hidden>
+                              📦
+                            </div>
+                            <p className="mt-1 font-mono text-lg font-black text-cb-flame">{st.casesOpened}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Кейсы</p>
+                          </div>
+                          <div className="rounded-xl border border-cb-stroke/50 bg-black/30 py-3">
+                            <div className="text-lg" aria-hidden>
+                              ⇈
+                            </div>
+                            <p className="mt-1 font-mono text-lg font-black text-cb-flame">{st.upgradesDone}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Апгрейд</p>
+                          </div>
+                          <div className="rounded-xl border border-cb-stroke/50 bg-black/30 py-3">
+                            <div className="text-lg" aria-hidden>
+                              📋
+                            </div>
+                            <p className="mt-1 font-mono text-lg font-black text-cb-flame">{st.itemsSold}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Продажи</p>
+                          </div>
+                        </div>
+                        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                          Получено с продаж
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-3">
+                          <span className="text-xl" aria-hidden>
+                            🪙
+                          </span>
+                          <span className="font-mono text-xl font-black text-cb-flame">
+                            {formatRub(st.soldTotalRub)} ₽
+                          </span>
+                          <span className="text-sm text-zinc-400">
+                            {st.itemsSold}{" "}
+                            {st.itemsSold === 1 ? "предмет" : st.itemsSold > 1 && st.itemsSold < 5 ? "предмета" : "предметов"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Лучший дроп */}
+                      {bestDrop ? (
+                        <div className={`${profileCard} p-5 sm:p-6`}>
+                          <h2 className="text-center text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
+                            Лучший дроп
+                          </h2>
+                          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <p className="line-clamp-2 text-base font-bold leading-snug text-white sm:text-lg">
+                                {bestDrop.name}
+                              </p>
+                              {bestDrop.source === "upgrade" ? (
+                                <p className="mt-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cb-flame">
+                                  Выпало в апгрейде
+                                </p>
+                              ) : null}
+                              <p className="mt-2 text-xs text-zinc-500">Редкость: {bestDrop.rarity}</p>
+                              <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#dc2626] px-3 py-1 font-mono text-sm font-black tabular-nums text-white shadow-md">
+                                {formatRub(bestDrop.sellPrice)}&nbsp;₽
+                              </p>
+                            </div>
+                            <div
+                              className={`relative mx-auto h-36 w-36 shrink-0 overflow-hidden rounded-xl ring-1 sm:h-40 sm:w-40 ${
+                                rarityClass[bestDrop.rarity] || rarityClass.common
+                              }`}
+                            >
+                              <Image
+                                src={bestDrop.image || "/logo.svg"}
+                                alt=""
+                                fill
+                                className="object-contain p-2"
+                                unoptimized
+                              />
+                            </div>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="flex h-24 w-24 items-center justify-center bg-zinc-900 text-2xl text-zinc-600">
-                          ?
+                        <div className={`${profileCard} flex min-h-[200px] flex-col items-center justify-center p-6 text-center`}>
+                          <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Лучший дроп</p>
+                          <p className="mt-3 max-w-xs text-sm text-zinc-600">
+                            Откройте кейс или выиграйте апгрейд — лучший предмет появится здесь
+                          </p>
                         </div>
                       )}
                     </div>
-                  </div>
-                  <div className="min-w-0 flex-1 text-center sm:text-left">
-                    <p className="truncate text-xl font-bold text-white sm:text-2xl">{me.displayName}</p>
-                    <div className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border border-orange-500/35 bg-gradient-to-r from-orange-950/50 to-violet-950/40 px-6 py-3 sm:items-start">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-orange-300/80">
-                        Баланс
-                      </span>
-                      <span className="font-mono text-2xl font-black text-white">
-                        {formatRub(me.balance)}{" "}
-                        <span className="text-lg font-bold text-orange-400/90">₽</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Промокод */}
                 <div className="mb-10 overflow-hidden rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-950/40 via-[#0c1022] to-purple-950/30 p-6 sm:p-8">
@@ -344,41 +586,10 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {bestDrop && (
-                  <div className="mb-10 overflow-hidden rounded-2xl border border-cb-stroke/50 bg-[#0a1020]/80 p-6 shadow-inner backdrop-blur-sm">
-                    <div className="flex items-start justify-between gap-6">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-cb-flame/90">
-                          Лучший дроп
-                        </p>
-                        <p className="mt-3 text-lg font-bold text-white">
-                          {bestDrop.name}
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-400">
-                          Редкость: {bestDrop.rarity}
-                        </p>
-                        <p className="mt-2 font-mono text-2xl font-black text-cb-flame">
-                          {formatRub(bestDrop.sellPrice)} ₽
-                        </p>
-                      </div>
-                      <div
-                        className={`relative h-20 w-20 overflow-hidden rounded-xl ring-1 ${
-                          rarityClass[bestDrop.rarity] || rarityClass.common
-                        }`}
-                      >
-                        <Image
-                          src={bestDrop.image || "/logo.svg"}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="relative overflow-hidden rounded-2xl border border-cb-stroke/75 bg-cb-panel/40 bg-cb-mesh shadow-[inset_0_1px_0_rgba(255,49,49,0.06)]">
+                <div
+                  id="inventory"
+                  className="relative overflow-hidden rounded-2xl border border-cb-stroke/75 bg-cb-panel/40 bg-cb-mesh shadow-[inset_0_1px_0_rgba(255,49,49,0.06)]"
+                >
                   <div
                     className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_42%,rgba(255,49,49,0.06)_50%,transparent_58%)]"
                     aria-hidden

@@ -19,7 +19,7 @@ export function HomePage() {
     homeCaseImageScale: 100,
     homeSkinImageScale: 100,
   });
-  /** Якщо /api/site-ui недоступний (часто — не перезапущений backend), користувач лишається на 100%. */
+  /** Если /api/site-ui недоступен (часто — не перезапущен backend), пользователь остаётся на 100%. */
   const [siteUiLoadIssue, setSiteUiLoadIssue] = useState<string | null>(null);
 
   const loadCases = useCallback(async () => {
@@ -50,14 +50,14 @@ export function HomePage() {
     }
     const hint =
       r.status === 404
-        ? "API без маршруту /api/site-ui — зупиніть старий процес Node і перезапустіть backend з актуального коду (npm run dev з кореня репозиторію)."
-        : r.error || "Немає зв’язку з API";
+        ? "API без маршрута /api/site-ui — остановите старый процесс Node и перезапустите backend из актуального кода (npm run dev из корня репозитория)."
+        : r.error || "Нет связи с API";
     if (process.env.NODE_ENV === "development") {
-      console.warn("[StormBattle] Масштаб карток на головній лишається 100%:", hint);
+      console.warn("[StormBattle] Масштаб карточек на главной остаётся 100%:", hint);
     }
     setSiteUiLoadIssue(
       r.status === 404
-        ? "Масштаб карток на головній не застосовано (404 /api/site-ui). Перезапустіть backend з актуального коду."
+        ? "Масштаб карточек на главной не применён (404 /api/site-ui). Перезапустите backend из актуального кода."
         : process.env.NODE_ENV === "development"
           ? hint
           : null,

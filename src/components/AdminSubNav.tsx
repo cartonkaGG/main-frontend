@@ -43,7 +43,7 @@ export function AdminSubNav() {
           supportOnly ? "text-sky-400/95" : "text-amber-500/90"
         }`}
       >
-        {!me ? "…" : full ? "Админ" : supportOnly ? "Підтримка" : "Панель"}
+        {!me ? "…" : full ? "Админ" : supportOnly ? "Поддержка" : "Панель"}
       </span>
       {full && (
         <>
@@ -60,12 +60,12 @@ export function AdminSubNav() {
             Пользователи
           </Link>
           <Link href="/admin/audit-logs" className={linkClass}>
-            Логи адмінів
+            Логи админов
           </Link>
         </>
       )}
       <Link href="/admin/support" className="text-sky-300/90 hover:text-sky-200">
-        Звернення
+        Обращения
       </Link>
     </>
   );

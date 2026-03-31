@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch, getToken } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { apiFetch } from "@/lib/api";
 
 type FeaturedPromo = {
   id: string;
@@ -55,10 +54,6 @@ function Sparkle({ className }: { className?: string }) {
 export function PromoHeroBanner() {
   const [featured, setFeatured] = useState<FeaturedPromo | null>(null);
   const [tick, setTick] = useState(0);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminChecked, setAdminChecked] = useState(false);
 
   const loadFeatured = useCallback(async () => {
     const r = await apiFetch<{ promo: FeaturedPromo | null }>("/api/promo/featured");
@@ -76,15 +71,6 @@ export function PromoHeroBanner() {
   }, [loadFeatured]);
 
   useEffect(() => {
-    if (!getToken()) return;
-    (async () => {
-      const r = await apiFetch<{ isAdmin?: boolean }>("/api/me");
-      if (r.ok) setIsAdmin(Boolean(r.data?.isAdmin));
-      setAdminChecked(true);
-    })();
-  }, []);
-
-  useEffect(() => {
     if (!featured?.endsAt) return;
     const t = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(t);
@@ -95,55 +81,6 @@ export function PromoHeroBanner() {
     endsMs != null && Number.isFinite(endsMs)
       ? endsMs - Date.now() + 0 * tick
       : null;
-
-  async function redeem(code: string) {
-    const c = code.trim();
-    if (!c) return;
-    if (!getToken()) {
-      setMsg("Войдите через Steam, чтобы активировать.");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    const r = await apiFetch<{
-      granted?: number;
-      newBalance?: number;
-      depositPercent?: number;
-      error?: string;
-    }>(
-      "/api/promo/redeem",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: c }),
-      }
-    );
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(r.error || "Не удалось активировать");
-      return;
-    }
-    if (typeof r.data?.depositPercent === "number") {
-      setMsg(`+${r.data.depositPercent}% к депозиту`);
-    } else {
-      setMsg(
-        `+${formatRub(r.data?.granted ?? 0)} ₽ на баланс. Всего: ${
-          typeof r.data?.newBalance === "number" ? formatRub(r.data.newBalance) : "—"
-        } ₽`
-      );
-    }
-    window.dispatchEvent(new CustomEvent("cd-balance-updated"));
-  }
-
-  async function copyCode(code: string) {
-    try {
-      await navigator.clipboard.writeText(code);
-      setMsg("Код скопирован");
-      setTimeout(() => setMsg(null), 2000);
-    } catch {
-      setMsg("Не удалось скопировать");
-    }
-  }
 
   const displayCode = featured?.code || "";
   const pct = featured?.bonusPercent ?? 0;
@@ -163,7 +100,7 @@ export function PromoHeroBanner() {
         />
 
         <div className="relative grid gap-8 p-6 sm:gap-6 sm:p-10 lg:grid-cols-[minmax(0,1.15fr)_auto_minmax(0,1fr)] lg:items-center">
-          {/* Ваучеры + бейдж +N% / подпись */}
+          {/* Ваучеры + бейдж +N% */}
           <div className="flex justify-center lg:justify-start">
             <div className="relative flex items-center pl-2">
               <div className="relative h-[7.5rem] w-[6.5rem] shrink-0 sm:h-[8.5rem] sm:w-[7.5rem]">
@@ -249,7 +186,7 @@ export function PromoHeroBanner() {
               Используй промокод
             </p>
             {displayCode ? (
-              <div className="flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-sm lg:items-end">
+              <div className="flex w-full max-w-md flex-col items-stretch sm:max-w-sm lg:items-end">
                 <div className="rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 p-[2px] shadow-[0_12px_40px_rgba(234,88,12,0.35)]">
                   <div className="rounded-[0.9rem] bg-[#0a0e18]/90 px-6 py-3.5 text-center backdrop-blur-sm sm:px-8">
                     <span className="font-mono text-xl font-black tracking-[0.15em] text-white sm:text-2xl">
@@ -257,37 +194,6 @@ export function PromoHeroBanner() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 lg:justify-end">
-                  {getToken() && !adminChecked ? (
-                    <div className="px-4 py-2 text-xs font-semibold text-zinc-400">
-                      Загрузка…
-                    </div>
-                  ) : isAdmin ? null : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => copyCode(displayCode)}
-                        className="rounded-xl border border-violet-500/40 bg-violet-950/40 px-5 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-400/60 hover:bg-violet-900/40 disabled:opacity-50"
-                      >
-                        Копировать
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy || (remaining != null && remaining <= 0)}
-                        onClick={() => redeem(displayCode)}
-                        className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-900/40 transition hover:brightness-110 disabled:opacity-50"
-                      >
-                        Активировать
-                      </button>
-                    </>
-                  )}
-                </div>
-                {msg && (
-                  <p className="max-w-sm text-center text-xs leading-relaxed text-amber-200/90 lg:text-right">
-                    {msg}
-                  </p>
-                )}
               </div>
             ) : (
               <p className="max-w-xs text-center text-sm leading-relaxed text-zinc-500 lg:text-right">

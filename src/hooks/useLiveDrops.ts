@@ -12,6 +12,8 @@ export type LiveDrop = {
   caseName: string;
   image: string | null;
   at: number;
+  /** Нет в старых записях буфера — считаем как кейс */
+  source?: "case" | "upgrade";
 };
 
 const MAX_UI = 100;

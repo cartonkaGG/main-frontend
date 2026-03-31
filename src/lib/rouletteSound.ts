@@ -54,23 +54,22 @@ export function startRouletteSpinTicks(
 
   const ctx = new AC();
   let closed = false;
-  let rafId = 0;
-  let startWall = 0;
-  let nextClackAt = 0;
+  let tickId = 0;
+  const startWall = performance.now();
 
   void ctx.resume().catch(() => {});
 
   const finish = () => {
     if (closed) return;
     closed = true;
-    cancelAnimationFrame(rafId);
+    window.clearTimeout(tickId);
     ctx.close().catch(() => {});
   };
 
-  const loop = (wall: number) => {
+  /** Плануємо лише тики звуку, без RAF на кожен кадр — менше навантаження під час рулетки */
+  const scheduleClack = () => {
     if (closed) return;
-    if (startWall === 0) startWall = wall;
-    const elapsed = wall - startWall;
+    const elapsed = performance.now() - startWall;
     const progress = Math.min(1, elapsed / durationMs);
 
     if (elapsed >= durationMs) {
@@ -79,24 +78,19 @@ export function startRouletteSpinTicks(
       return;
     }
 
-    if (wall >= nextClackAt) {
-      const slow = progress * progress;
-      playRouletteClack(ctx, 0.55 + 0.45 * (1 - slow * 0.35));
-      const gapMs = 38 + slow * 195 + Math.random() * 12;
-      nextClackAt = wall + gapMs;
-    }
-
-    rafId = requestAnimationFrame(loop);
+    const slow = progress * progress;
+    playRouletteClack(ctx, 0.55 + 0.45 * (1 - slow * 0.35));
+    const gapMs = 38 + slow * 195 + Math.random() * 12;
+    tickId = window.setTimeout(scheduleClack, gapMs);
   };
 
-  nextClackAt = performance.now();
-  rafId = requestAnimationFrame(loop);
+  tickId = window.setTimeout(scheduleClack, 0);
 
-  const timeoutId = setTimeout(finish, durationMs + 200);
+  const safetyTimeoutId = setTimeout(finish, durationMs + 200);
 
   return () => {
-    cancelAnimationFrame(rafId);
-    clearTimeout(timeoutId);
+    window.clearTimeout(tickId);
+    clearTimeout(safetyTimeoutId);
     if (!closed) {
       closed = true;
       ctx.close().catch(() => {});

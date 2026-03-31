@@ -18,6 +18,7 @@ import { apiFetch, getToken } from "@/lib/api";
 import { requestAuthModal } from "@/lib/authModal";
 import { sortLootGoldToGray } from "@/lib/caseLootSort";
 import { formatRub } from "@/lib/money";
+import { preferHighResSteamEconomyImage } from "@/lib/steamImage";
 
 type CaseDisplayOdds = {
   referenceRtpPct: number | null;
@@ -658,12 +659,12 @@ export default function CaseOpenPage() {
                             style={{ transform: `translateZ(0) scale(${heroCaseS})` }}
                           >
                             <Image
-                              src={c.image}
+                              src={preferHighResSteamEconomyImage(c.image) ?? c.image}
                               alt=""
                               fill
-                              sizes="(max-width: 640px) 96vw, 360px"
+                              sizes="(max-width: 640px) 96vw, (max-width: 1536px) 45vw, 640px"
                               quality={100}
-                              className="object-contain object-bottom origin-bottom scale-[1.22] drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)] sm:scale-[1.28]"
+                              className="object-contain object-bottom origin-bottom scale-[1.22] drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)] sm:scale-[1.28] [image-rendering:high-quality] [-webkit-backface-visibility:hidden]"
                               priority
                               unoptimized
                             />
@@ -678,12 +679,12 @@ export default function CaseOpenPage() {
                           >
                             <div className="cb-case-skin-float relative h-full w-full">
                               <Image
-                                src={c.skinImage}
+                                src={preferHighResSteamEconomyImage(c.skinImage) ?? c.skinImage}
                                 alt=""
                                 fill
-                                sizes="(max-width: 640px) 70vw, 280px"
+                                sizes="(max-width: 640px) 70vw, (max-width: 1536px) 38vw, 520px"
                                 quality={100}
-                                className="object-contain drop-shadow-[0_0_28px_rgba(255,255,255,0.12)]"
+                                className="object-contain drop-shadow-[0_0_28px_rgba(255,255,255,0.12)] [image-rendering:high-quality] [-webkit-backface-visibility:hidden]"
                                 priority
                                 unoptimized
                               />

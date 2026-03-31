@@ -40,7 +40,7 @@ export default function AdminSupportPage() {
   const loadList = useCallback(async () => {
     const r = await apiFetch<{ tickets: TicketSummary[] }>("/api/admin/support/tickets");
     if (!r.ok) {
-      setLoadErr(r.error || "Не вдалося завантажити");
+      setLoadErr(r.error || "Не удалось загрузить");
       return;
     }
     setRows(r.data?.tickets || []);
@@ -59,7 +59,7 @@ export default function AdminSupportPage() {
       `/api/admin/support/tickets/${encodeURIComponent(id)}`,
     );
     if (!r.ok) {
-      setDetailErr(r.error || "Помилка");
+      setDetailErr(r.error || "Ошибка");
       return;
     }
     setSelected(r.data?.ticket || null);
@@ -79,7 +79,7 @@ export default function AdminSupportPage() {
     );
     setActionBusy(false);
     if (!r.ok) {
-      setActionErr(r.error || "Помилка");
+      setActionErr(r.error || "Ошибка");
       return;
     }
     setSelected(r.data?.ticket || selected);
@@ -89,7 +89,7 @@ export default function AdminSupportPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-white">Звернення користувачів</h1>
+      <h1 className="text-2xl font-bold text-white">Обращения пользователей</h1>
 
       {loadErr && <p className="text-sm text-red-300">{loadErr}</p>}
 
@@ -100,7 +100,7 @@ export default function AdminSupportPage() {
           </div>
           <ul className="max-h-[min(60vh,520px)] divide-y divide-cb-stroke/40 overflow-y-auto">
             {rows.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-zinc-500">Поки немає звернень</li>
+              <li className="px-4 py-8 text-center text-sm text-zinc-500">Пока нет обращений</li>
             ) : (
               rows.map((t) => (
                 <li key={t.id}>
@@ -117,9 +117,9 @@ export default function AdminSupportPage() {
                     </span>
                     <span className="text-[11px] text-zinc-600">
                       {t.status === "open" ? (
-                        <span className="text-sky-400">відкрите</span>
+                        <span className="text-sky-400">открыто</span>
                       ) : (
-                        "закрите"
+                        "закрыто"
                       )}{" "}
                       · {new Date(t.updatedAt).toLocaleString()}
                     </span>
@@ -133,7 +133,7 @@ export default function AdminSupportPage() {
         <div className="rounded-xl border border-cb-stroke bg-cb-panel/25 p-5">
           {detailErr && <p className="text-sm text-red-300">{detailErr}</p>}
           {!selected && !detailErr ? (
-            <p className="text-sm text-zinc-500">Оберіть звернення зліва.</p>
+            <p className="text-sm text-zinc-500">Выберите обращение слева.</p>
           ) : null}
           {selected && (
             <div className="space-y-4">
@@ -145,9 +145,9 @@ export default function AdminSupportPage() {
                 <p className="mt-1 text-xs text-zinc-500">
                   Статус:{" "}
                   {selected.status === "open" ? (
-                    <span className="text-sky-400">відкрите</span>
+                    <span className="text-sky-400">открыто</span>
                   ) : (
-                    "закрите"
+                    "закрыто"
                   )}
                 </p>
               </div>
@@ -161,8 +161,8 @@ export default function AdminSupportPage() {
                   >
                     <div className="text-[10px] uppercase tracking-wide text-zinc-500">
                       {m.from === "staff"
-                        ? `Підтримка${m.authorName ? ` · ${m.authorName}` : ""}`
-                        : "Користувач"}{" "}
+                        ? `Поддержка${m.authorName ? ` · ${m.authorName}` : ""}`
+                        : "Пользователь"}{" "}
                       · {new Date(m.at).toLocaleString()}
                     </div>
                     <p className="mt-1 whitespace-pre-wrap">{m.body}</p>
@@ -171,13 +171,13 @@ export default function AdminSupportPage() {
               </ul>
 
               <label className="block space-y-2">
-                <span className="text-xs font-bold text-zinc-500">Відповідь</span>
+                <span className="text-xs font-bold text-zinc-500">Ответ</span>
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   rows={4}
                   className="w-full resize-y rounded-xl border border-cb-stroke bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-sky-500/55"
-                  placeholder="Текст відповіді користувачу"
+                  placeholder="Текст ответа пользователю"
                   maxLength={8000}
                 />
               </label>
@@ -189,7 +189,7 @@ export default function AdminSupportPage() {
                   onClick={() => void sendPatch({ reply: reply.trim() })}
                   className="rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg disabled:opacity-50"
                 >
-                  Надіслати відповідь
+                  Отправить ответ
                 </button>
                 <button
                   type="button"
@@ -199,7 +199,7 @@ export default function AdminSupportPage() {
                   }
                   className="rounded-xl border border-cb-stroke bg-zinc-900/50 px-5 py-2.5 text-sm font-semibold text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-50"
                 >
-                  {selected.status === "open" ? "Закрити" : "Відкрити знову"}
+                  {selected.status === "open" ? "Закрыть" : "Открыть снова"}
                 </button>
               </div>
             </div>

@@ -342,7 +342,7 @@ export default function AdminUsersPage() {
                 <div>
                   <p className="text-sm font-bold text-white">Управление правами</p>
                   <p className="mt-1 text-xs text-zinc-400">
-                    Користувач, сапорт (лише звернення) або повний адмін.
+                    Пользователь, саппорт (только обращения) или полный админ.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
@@ -355,9 +355,9 @@ export default function AdminUsersPage() {
                       }
                       className="min-h-[2.7rem] rounded-xl border border-cb-stroke bg-black/30 px-3 py-2 text-sm text-white"
                     >
-                      <option value="user">Користувач</option>
-                      <option value="support">Сапорт</option>
-                      <option value="admin">Адмін</option>
+                      <option value="user">Пользователь</option>
+                      <option value="support">Саппорт</option>
+                      <option value="admin">Админ</option>
                     </select>
                   </label>
                   <button

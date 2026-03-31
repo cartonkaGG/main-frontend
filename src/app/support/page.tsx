@@ -30,7 +30,7 @@ export default function SupportPage() {
     }
     const r = await apiFetch<{ tickets: TicketSummary[] }>("/api/support/tickets");
     if (!r.ok) {
-      setListErr(r.error || "Не вдалося завантажити звернення");
+      setListErr(r.error || "Не удалось загрузить обращения");
       return;
     }
     setList(r.data?.tickets || []);
@@ -57,10 +57,10 @@ export default function SupportPage() {
     });
     setBusy(false);
     if (!r.ok) {
-      setErr(r.error || "Помилка");
+      setErr(r.error || "Ошибка");
       return;
     }
-    setOk("Звернення надіслано. Ми відповімо в цьому ж треді.");
+    setOk("Обращение отправлено. Мы ответим в этом же треде.");
     setSubject("");
     setMessage("");
     await loadTickets();
@@ -70,9 +70,9 @@ export default function SupportPage() {
     <SiteShell>
       <div className="mx-auto max-w-2xl space-y-10 px-4 py-10 sm:px-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Підтримка</h1>
+          <h1 className="text-2xl font-bold text-white">Поддержка</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Опишіть проблему — команда перегляне звернення в панелі підтримки.
+            Опишите проблему — команда просмотрит обращение в панели поддержки.
           </p>
         </div>
 
@@ -83,7 +83,7 @@ export default function SupportPage() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full rounded-xl border border-cb-stroke bg-black/35 px-4 py-3 text-sm text-white outline-none focus:border-sky-500/55"
-              placeholder="Коротко, про що звернення"
+              placeholder="Кратко, о чём обращение"
               maxLength={200}
               required
             />
@@ -95,7 +95,7 @@ export default function SupportPage() {
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
               className="w-full resize-y rounded-xl border border-cb-stroke bg-black/35 px-4 py-3 text-sm text-white outline-none focus:border-sky-500/55"
-              placeholder="Деталі, скріншоти можна описати текстом"
+              placeholder="Детали, скриншоты можно описать текстом"
               maxLength={8000}
               required
             />
@@ -107,18 +107,18 @@ export default function SupportPage() {
             disabled={busy}
             className="rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-sky-900/30 transition hover:brightness-110 disabled:opacity-50"
           >
-            {busy ? "Надсилаємо…" : "Надіслати"}
+            {busy ? "Отправляем…" : "Отправить"}
           </button>
         </form>
 
         <div className="rounded-2xl border border-cb-stroke/80 bg-black/20 p-6">
-          <h2 className="text-lg font-bold text-white">Мої звернення</h2>
+          <h2 className="text-lg font-bold text-white">Мои обращения</h2>
           {!getToken() ? (
-            <p className="mt-3 text-sm text-zinc-500">Увійдіть через Steam, щоб бачити історію.</p>
+            <p className="mt-3 text-sm text-zinc-500">Войдите через Steam, чтобы видеть историю.</p>
           ) : listErr ? (
             <p className="mt-3 text-sm text-red-300">{listErr}</p>
           ) : list.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-500">Поки порожньо.</p>
+            <p className="mt-3 text-sm text-zinc-500">Пока пусто.</p>
           ) : (
             <ul className="mt-4 space-y-3">
               {list.map((t) => (
@@ -130,9 +130,9 @@ export default function SupportPage() {
                     <span className="font-medium text-zinc-200">{t.subject}</span>
                     <span className="text-xs text-zinc-500">
                       {t.status === "open" ? (
-                        <span className="text-sky-400">відкрите</span>
+                        <span className="text-sky-400">открыто</span>
                       ) : (
-                        <span className="text-zinc-500">закрите</span>
+                        <span className="text-zinc-500">закрыто</span>
                       )}{" "}
                       · {new Date(t.updatedAt).toLocaleString()}
                     </span>

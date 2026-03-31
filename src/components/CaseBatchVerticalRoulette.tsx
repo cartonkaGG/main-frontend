@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getRouletteSoundMuted,
   setRouletteSoundMuted,
@@ -13,18 +13,19 @@ import {
   rarityCardFill,
   ROULETTE_SPIN_DURATION_MS,
   ROULETTE_SPIN_EASE,
+  rouletteStripHeadSlots,
+  rouletteStripSlotCount,
   type RouletteItem,
 } from "@/components/CaseRoulette";
 
-/** Висота картки + gap-2 (8px), узгоджено з CARD_STEP_Y у transition */
-const CARD_STEP_Y = 112;
-const HALF_CARD_Y = 52;
-const TRACK_PAD = 6;
-const REPEAT = 48;
+/** Висота картки + gap між картками (px), має збігатися з h-[…rem] + gap у стрічці */
+const CARD_STEP_Y = 164;
+const HALF_CARD_Y = 76;
+const TRACK_PAD = 8;
 const SPIN_ROUNDS = 26;
 const START_OFFSET_Y = Math.round((2400 * ROULETTE_SPIN_DURATION_MS) / 4800);
 
-function BatchVerticalCard({
+const BatchVerticalCard = memo(function BatchVerticalCard({
   item,
   isWinner,
 }: {
@@ -36,11 +37,11 @@ function BatchVerticalCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[6.5rem] w-full max-w-[92px] shrink-0 overflow-hidden rounded-lg border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-transform duration-500 ease-out will-change-transform sm:max-w-[104px] ${fill} ${
-        isWinner ? "z-10 scale-[1.06] shadow-[0_0_22px_rgba(255,49,49,0.3)]" : "z-0 scale-100"
+      className={`relative h-[9.5rem] w-full max-w-[118px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-transform duration-500 ease-out sm:max-w-[132px] ${fill} ${
+        isWinner ? "z-10 scale-[1.05] shadow-[0_0_26px_rgba(255,49,49,0.35)] will-change-transform" : "z-0 scale-100"
       }`}
     >
-      <div className="relative z-[1] flex h-full min-h-0 flex-col p-1 pb-0.5">
+      <div className="relative z-[1] flex h-full min-h-0 flex-col p-1.5 pb-1">
         <div className="relative mx-auto min-h-0 flex-1 basis-0 w-full">
           {item.image ? (
             <Image
@@ -51,17 +52,17 @@ function BatchVerticalCard({
               unoptimized
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-lg text-zinc-300/80">?</div>
+            <div className="flex h-full items-center justify-center text-2xl text-zinc-300/80">?</div>
           )}
         </div>
-        <p className="mt-0.5 line-clamp-2 text-center text-[8px] font-semibold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] sm:text-[9px]">
+        <p className="mt-1 line-clamp-2 text-center text-[10px] font-semibold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] sm:text-[11px]">
           {item.name}
         </p>
       </div>
-      <div className={`absolute bottom-0 left-0 right-0 z-[2] h-1 ${bar}`} />
+      <div className={`absolute bottom-0 left-0 right-0 z-[2] h-1.5 ${bar}`} />
     </div>
   );
-}
+});
 
 function VerticalColumn({
   items,
@@ -85,7 +86,7 @@ function VerticalColumn({
 
   const strip = useMemo(() => {
     if (!items.length) return [];
-    const len = Math.max(items.length * REPEAT, items.length * (SPIN_ROUNDS + 4));
+    const len = rouletteStripSlotCount(items.length);
     return Array.from({ length: len }, (_, i) => ({
       ...items[i % items.length],
       key: i,
@@ -95,9 +96,12 @@ function VerticalColumn({
   useLayoutEffect(() => {
     if (!viewportRef.current || !items.length) return;
 
+    const n = items.length;
+    const head = rouletteStripHeadSlots(n);
+
     if (spinWaiting) {
       const vh = viewportRef.current.clientHeight;
-      const idleIdx = items.length * 3;
+      const idleIdx = n * 3 + head;
       setTransitionMs(0);
       setTy(vh / 2 - HALF_CARD_Y - TRACK_PAD - idleIdx * CARD_STEP_Y);
       return;
@@ -105,20 +109,17 @@ function VerticalColumn({
 
     if (landOnIndex == null) {
       const vh = viewportRef.current.clientHeight;
-      const idleIdx = items.length * 3;
+      const idleIdx = n * 3 + head;
       setTransitionMs(0);
       setTy(vh / 2 - HALF_CARD_Y - TRACK_PAD - idleIdx * CARD_STEP_Y);
       landedRef.current = false;
       return;
     }
 
-    if (landEpoch === 0) return;
-
     landedRef.current = false;
 
     const vh = viewportRef.current.clientHeight;
-    const n = items.length;
-    const finalSlot = SPIN_ROUNDS * n + landOnIndex;
+    const finalSlot = SPIN_ROUNDS * n + landOnIndex + head;
     const endTy = vh / 2 - HALF_CARD_Y - TRACK_PAD - finalSlot * CARD_STEP_Y;
     const startTy = endTy + START_OFFSET_Y;
 
@@ -143,16 +144,17 @@ function VerticalColumn({
   }
 
   const n = items.length;
+  const headSlots = rouletteStripHeadSlots(n);
   const winnerStripIndex =
-    landOnIndex != null && n > 0 ? SPIN_ROUNDS * n + landOnIndex : -1;
+    landOnIndex != null && n > 0 ? SPIN_ROUNDS * n + landOnIndex + headSlots : -1;
 
   return (
     <div
       ref={viewportRef}
-      className="relative h-[11.5rem] min-w-0 flex-1 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_28px_rgba(0,0,0,0.45)] sm:h-[13rem] sm:max-w-[120px] sm:flex-none"
+      className="relative h-[16rem] min-w-0 flex-1 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] sm:h-[18rem] sm:max-w-[148px] sm:flex-none"
     >
       <div
-        className="flex flex-col items-center gap-2 px-1 pb-24 pt-2 will-change-transform"
+        className="flex flex-col items-center gap-3 px-1.5 pb-28 pt-2.5 will-change-transform"
         style={{
           transform: `translate3d(0,${ty}px,0)`,
           transition:
@@ -175,16 +177,16 @@ function VerticalColumn({
         className="pointer-events-none absolute inset-x-0 top-1/2 z-20 h-0 -translate-y-1/2"
         aria-hidden
       >
-        <div className="absolute -left-0.5 top-1/2 h-3 w-3 -translate-y-1/2 border-y-[6px] border-l-[8px] border-y-transparent border-l-orange-400/90 drop-shadow-[0_0_12px_rgba(249,115,22,0.6)] sm:h-3.5 sm:w-3.5 sm:border-y-[7px] sm:border-l-[9px]" />
-        <div className="absolute -right-0.5 top-1/2 h-3 w-3 -translate-y-1/2 border-y-[6px] border-r-[8px] border-y-transparent border-r-orange-400/90 drop-shadow-[0_0_12px_rgba(249,115,22,0.6)] sm:h-3.5 sm:w-3.5 sm:border-y-[7px] sm:border-r-[9px]" />
+        <div className="absolute -left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 border-y-[8px] border-l-[11px] border-y-transparent border-l-orange-400/90 drop-shadow-[0_0_14px_rgba(249,115,22,0.65)] sm:h-[1.125rem] sm:w-[1.125rem] sm:border-y-[9px] sm:border-l-[12px]" />
+        <div className="absolute -right-0.5 top-1/2 h-4 w-4 -translate-y-1/2 border-y-[8px] border-r-[11px] border-y-transparent border-r-orange-400/90 drop-shadow-[0_0_14px_rgba(249,115,22,0.65)] sm:h-[1.125rem] sm:w-[1.125rem] sm:border-y-[9px] sm:border-r-[12px]" />
       </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[#05080f] to-transparent sm:h-12"
+        className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-[#05080f] to-transparent sm:h-16"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#05080f] to-transparent sm:h-12"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#05080f] to-transparent sm:h-16"
         aria-hidden
       />
     </div>
@@ -245,14 +247,14 @@ export function CaseBatchVerticalRoulette({
 
   if (!items.length) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-2xl border border-cb-stroke/60 bg-black/30 text-sm text-zinc-500">
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-cb-stroke/60 bg-black/30 text-sm text-zinc-500">
         В кейсе нет предметов
       </div>
     );
   }
 
   return (
-    <div className="relative w-full max-w-5xl">
+    <div className="relative w-full max-w-6xl">
       <button
         type="button"
         onClick={() => {
@@ -260,17 +262,17 @@ export function CaseBatchVerticalRoulette({
           setSoundMuted(next);
           setRouletteSoundMuted(next);
         }}
-        className="absolute -right-1 -top-10 z-30 flex items-center gap-1.5 rounded-lg border border-cb-stroke/70 bg-[#0a0e14]/90 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 shadow-md transition hover:border-zinc-600 hover:text-zinc-200 sm:-top-11 sm:text-xs"
-        title={soundMuted ? "Увімкнути звук рулетки" : "Вимкнути звук рулетки"}
+        className="absolute -right-1 -top-11 z-30 flex items-center gap-1.5 rounded-lg border border-cb-stroke/70 bg-[#0a0e14]/90 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 shadow-md transition hover:border-zinc-600 hover:text-zinc-200 sm:-top-[3.25rem] sm:text-xs"
+        title={soundMuted ? "Включить звук рулетки" : "Выключить звук рулетки"}
         aria-pressed={!soundMuted}
       >
         <span className="text-base leading-none" aria-hidden>
           {soundMuted ? "🔇" : "🔊"}
         </span>
-        <span className="hidden sm:inline">{soundMuted ? "Звук вимк." : "Звук увімк."}</span>
+        <span className="hidden sm:inline">{soundMuted ? "Звук выкл." : "Звук вкл."}</span>
       </button>
 
-      <div className="flex w-full justify-center gap-1.5 sm:gap-2.5">
+      <div className="flex w-full justify-center gap-2 sm:gap-4">
         {Array.from({ length: safeCount }, (_, i) => (
           <VerticalColumn
             key={i}
