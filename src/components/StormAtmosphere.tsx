@@ -86,7 +86,8 @@ export function StormAtmosphere() {
     if (reducedMotion) return;
 
     let cancelled = false;
-    let t: ReturnType<typeof setTimeout>;
+    /** У браузері id таймера — number (не NodeJS.Timeout). */
+    let t: number | undefined;
 
     function oneStrike(playSound: boolean) {
       if (cancelled) return;
@@ -118,7 +119,7 @@ export function StormAtmosphere() {
     scheduleNext();
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      if (t !== undefined) window.clearTimeout(t);
     };
   }, [reducedMotion, playThunder]);
 
