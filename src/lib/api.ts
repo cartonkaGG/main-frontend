@@ -53,7 +53,7 @@ export async function apiFetch<T>(
     }
     if (!res.ok) {
       const payload = data as
-        | { error?: string; details?: ApiFieldErrors }
+        | { error?: string; details?: ApiFieldErrors; code?: string }
         | undefined;
       const err = payload?.error || `Ошибка ${res.status}`;
       const details = payload?.details;
@@ -61,7 +61,8 @@ export async function apiFetch<T>(
       if (
         res.status === 401 &&
         typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/auth/callback")
+        !window.location.pathname.startsWith("/auth/callback") &&
+        payload?.code !== "CLOSED_BETA_AUTH"
       ) {
         requestAuthModal(`${window.location.pathname}${window.location.search}`);
       }

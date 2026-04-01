@@ -16,7 +16,7 @@ export function AdminAreaGuard({ children }: { children: React.ReactNode }) {
     }
     let cancelled = false;
     (async () => {
-      const r = await apiFetch<{ isAdmin?: boolean; isSupportStaff?: boolean }>("/api/me");
+      const r = await apiFetch<{ isAdmin?: boolean; isSupportStaff?: boolean }>("/api/me/session");
       if (cancelled) return;
       if (!r.ok || !r.data) {
         setState("no");

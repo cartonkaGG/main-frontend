@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
 
-type Me = {
+type MeSession = {
   isAdmin?: boolean;
   isSupportStaff?: boolean;
 };
@@ -12,7 +12,7 @@ type Me = {
 const linkClass = "text-zinc-400 hover:text-white";
 
 export function AdminSubNav() {
-  const [me, setMe] = useState<Me | null>(null);
+  const [me, setMe] = useState<MeSession | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -21,7 +21,7 @@ export function AdminSubNav() {
     }
     let cancelled = false;
     (async () => {
-      const r = await apiFetch<Me>("/api/me");
+      const r = await apiFetch<MeSession>("/api/me/session");
       if (!cancelled) setMe(r.ok && r.data ? r.data : null);
     })();
     return () => {
@@ -58,6 +58,9 @@ export function AdminSubNav() {
           </Link>
           <Link href="/admin/users" className={linkClass}>
             Пользователи
+          </Link>
+          <Link href="/admin/beta" className={linkClass}>
+            Бета-доступ
           </Link>
           <Link href="/admin/deposits" className={linkClass}>
             Пополнения

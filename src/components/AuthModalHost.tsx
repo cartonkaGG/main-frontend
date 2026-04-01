@@ -15,6 +15,9 @@ export function AuthModalHost() {
 
   useEffect(() => {
     function onRequest(e: Event) {
+      if (typeof document !== "undefined" && document.documentElement.hasAttribute("data-closed-beta-gate")) {
+        return;
+      }
       const ce = e as CdAuthModalEvent;
       const detailNext = ce.detail?.nextUrl;
       const url =

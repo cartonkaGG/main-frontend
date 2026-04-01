@@ -15,12 +15,23 @@ const remoteImageHosts = [
   "cdn.gamecontent.io",
 ];
 
+/** Проксі /api/* на бекенд — тоді з браузера можна бити в той самий origin (localhost:3000/api/...). Див. frontend/.env.example */
+const backendProxy = String(
+  process.env.BACKEND_PROXY_URL || process.env.API_INTERNAL_URL || "",
+)
+  .trim()
+  .replace(/\/$/, "");
+
 const nextConfig = {
   images: {
     remotePatterns: remoteImageHosts.flatMap((hostname) => [
       { protocol: "https", hostname, pathname: "/**" },
       { protocol: "http", hostname, pathname: "/**" },
     ]),
+  },
+  async rewrites() {
+    if (!backendProxy) return [];
+    return [{ source: "/api/:path*", destination: `${backendProxy}/api/:path*` }];
   },
 };
 

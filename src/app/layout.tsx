@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthModalHost } from "@/components/AuthModalHost";
+import { ClosedBetaBoundary } from "@/components/ClosedBetaBoundary";
 import { StormAtmosphere } from "@/components/StormAtmosphere";
 
 export const metadata: Metadata = {
@@ -27,7 +28,9 @@ export default function RootLayout({
           <span className="cb-backdrop-orb cb-backdrop-orb--a" />
           <span className="cb-backdrop-orb cb-backdrop-orb--b" />
         </div>
-        <div className="relative z-10 min-h-screen lg:h-full lg:min-h-0">{children}</div>
+        <div className="relative z-10 min-h-screen lg:h-full lg:min-h-0">
+          <ClosedBetaBoundary>{children}</ClosedBetaBoundary>
+        </div>
         <AuthModalHost />
       </body>
     </html>
