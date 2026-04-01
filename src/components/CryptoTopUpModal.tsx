@@ -164,11 +164,6 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
       ? Math.floor(parsedUsd * rubPerServer)
       : null;
 
-  function rateSourceLabel(src?: string | null) {
-    if (src === "admin") return "настройки админа";
-    return "сервер";
-  }
-
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm"

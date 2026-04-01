@@ -226,7 +226,7 @@ export default function AdminWithdrawalsPage() {
           if (!cur || cur === nameStr) {
             next[w.id] = {
               ...prevRow,
-              marketHashName: hashFromSnap || snap.marketHashName || cur,
+              marketHashName: hashFromSnap || s.marketHashName || cur,
             };
           }
         }
