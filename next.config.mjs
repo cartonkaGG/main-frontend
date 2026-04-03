@@ -24,6 +24,7 @@ const remoteImageHosts = [
   "media.steampowered.com",
   "store.steampowered.com",
   "cdn.gamecontent.io",
+  "cdn.freekassa.net",
 ];
 
 /** Проксі /api/* на бекенд — тоді з браузера можна бити в той самий origin (localhost:3000/api/...). Див. frontend/.env.example */

@@ -75,14 +75,15 @@ export function startRouletteSpinTicks(
   if (!ctx) return () => {};
 
   let closed = false;
-  let tickId: ReturnType<typeof setTimeout> | undefined;
-  let safetyTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  /** DOM `setTimeout` у браузері повертає `number`; з @types/node глобальний тип може бути `NodeJS.Timeout`. */
+  let tickId: number | undefined;
+  let safetyTimeoutId: number | undefined;
 
   const finish = () => {
     if (closed) return;
     closed = true;
     if (tickId !== undefined) window.clearTimeout(tickId);
-    if (safetyTimeoutId !== undefined) clearTimeout(safetyTimeoutId);
+    if (safetyTimeoutId !== undefined) window.clearTimeout(safetyTimeoutId);
   };
 
   const begin = () => {
@@ -107,7 +108,7 @@ export function startRouletteSpinTicks(
     };
 
     tickId = window.setTimeout(scheduleClack, 0);
-    safetyTimeoutId = setTimeout(finish, durationMs + 200);
+    safetyTimeoutId = window.setTimeout(finish, durationMs + 200);
   };
 
   void ctx.resume().then(() => {
@@ -116,7 +117,7 @@ export function startRouletteSpinTicks(
 
   return () => {
     if (tickId !== undefined) window.clearTimeout(tickId);
-    if (safetyTimeoutId !== undefined) clearTimeout(safetyTimeoutId);
+    if (safetyTimeoutId !== undefined) window.clearTimeout(safetyTimeoutId);
     closed = true;
   };
 }

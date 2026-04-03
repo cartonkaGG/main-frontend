@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
 import { SITE_CURRENCY_CODE } from "@/lib/money";
@@ -201,10 +202,12 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
             </div>
             <div className="border-t border-cb-stroke/60 px-2 pb-2 pt-1 lg:px-3 lg:pb-3 lg:pt-2">
               <a href="https://freekassa.net/" target="_blank" rel="noopener noreferrer">
-                <img
+                <Image
                   src="https://cdn.freekassa.net/banners/big-dark-1.png"
                   title="Прием платежей на сайте для физических лиц и т.д."
                   alt=""
+                  width={468}
+                  height={60}
                   className="h-auto w-full max-w-full object-contain"
                 />
               </a>

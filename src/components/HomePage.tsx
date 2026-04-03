@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CaseCard, type CaseSummary } from "@/components/CaseCard";
 import { PromoHeroBanner } from "@/components/PromoHeroBanner";
@@ -173,7 +174,7 @@ export function HomePage() {
             rel="noopener noreferrer"
             className="inline-flex rounded-lg bg-black/70 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_20px_rgba(0,0,0,0.5)] transition hover:bg-black/85 hover:shadow-[0_0_0_1px_rgba(255,49,49,0.25)]"
           >
-            <img
+            <Image
               src="https://cdn.freekassa.net/banners/small-dark-1.png"
               title="Прием платежей"
               alt=""
