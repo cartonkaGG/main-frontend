@@ -258,7 +258,7 @@ export function SiteShell({ children }: Props) {
                 className="h-7 w-8 shrink-0 transition group-hover:drop-shadow-[0_0_10px_rgba(255,49,49,0.5)] sm:h-8 sm:w-[2.286rem]"
               />
             </span>
-            <span className="min-w-0 bg-gradient-to-r from-white via-zinc-100 to-zinc-500 bg-clip-text pr-0.5 text-sm font-black uppercase tracking-wide text-transparent sm:text-[15px]">
+            <span className="min-w-0 pr-0.5 text-sm font-black uppercase tracking-wide text-cb-flame drop-shadow-[0_0_10px_rgba(255,49,49,0.55)] sm:text-[15px]">
               Апгрейд
             </span>
           </Link>

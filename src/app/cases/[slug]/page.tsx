@@ -13,11 +13,11 @@ import {
   type RouletteItem,
 } from "@/components/CaseRoulette";
 import { CaseNeonRingFrame } from "@/components/CaseNeonRingFrame";
+import { SiteMoney } from "@/components/SiteMoney";
 import { SiteShell } from "@/components/SiteShell";
 import { apiFetch, getToken } from "@/lib/api";
 import { requestAuthModal } from "@/lib/authModal";
 import { sortLootGoldToGray } from "@/lib/caseLootSort";
-import { formatRub } from "@/lib/money";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 
 type CaseDisplayOdds = {
@@ -79,6 +79,27 @@ const lootRarityBar: Record<string, string> = {
   covert: "bg-red-600",
   extraordinary: "bg-amber-400",
   contraband: "bg-orange-500",
+};
+
+/**
+ * RGB для підсвітки «Содержимое кейса» (пробіли між числами — під `rgb(var(--glow-rgb) / α)`).
+ * Ореол через drop-shadow + radial на клітинці: видно навіть коли зображення скіна непрозоре.
+ */
+const lootSkinGlowRgb: Record<string, string> = {
+  common: "212 212 216",
+  uncommon: "56 189 248",
+  rare: "59 130 246",
+  epic: "217 70 239",
+  legendary: "251 191 36",
+  consumer: "212 212 216",
+  industrial: "203 213 225",
+  milspec: "59 130 246",
+  "mil-spec": "59 130 246",
+  restricted: "139 92 246",
+  classified: "217 70 239",
+  covert: "239 68 68",
+  extraordinary: "251 191 36",
+  contraband: "249 115 22",
 };
 
 function FastDropHeroCard({
@@ -150,9 +171,11 @@ function BatchResultMiniCard({
       className={`flex h-full min-h-[13.5rem] w-[140px] shrink-0 flex-col overflow-hidden rounded-xl border border-cb-stroke/70 shadow-lg sm:min-h-[15rem] sm:w-[160px] ${fill}`}
     >
       <div className="relative shrink-0 px-2 pt-2 text-right">
-        <span className="font-mono text-[10px] font-bold text-emerald-400">
-          {formatRub(row.item.sellPrice)} ₽
-        </span>
+        <SiteMoney
+          value={row.item.sellPrice}
+          className="justify-end font-mono text-[10px] font-bold text-emerald-400"
+          iconClassName="h-2.5 w-2.5 shrink-0"
+        />
       </div>
       <div className="relative mx-auto h-[100px] w-full shrink-0 px-2 sm:h-[118px]">
         {row.item.image ? (
@@ -837,7 +860,8 @@ export default function CaseOpenPage() {
                             <span className="text-base leading-none opacity-90" aria-hidden>
                               🛒
                             </span>
-                            Продать за {formatRub(drop.item.sellPrice)} ₽
+                            Продать за{" "}
+                            <SiteMoney value={drop.item.sellPrice} iconClassName="h-[1.1em] w-[1.1em]" />
                           </button>
                         </div>
                       </div>
@@ -897,7 +921,8 @@ export default function CaseOpenPage() {
                             <span className="text-base leading-none opacity-90" aria-hidden>
                               🛒
                             </span>
-                            Продать всё за {formatRub(batchSellTotalRub)} ₽
+                            Продать всё за{" "}
+                            <SiteMoney value={batchSellTotalRub} iconClassName="h-[1.1em] w-[1.1em]" />
                           </button>
                         </div>
                       </div>
@@ -928,7 +953,12 @@ export default function CaseOpenPage() {
                             ? "Открываем…"
                             : landIndex !== null && !drop && showRoulette
                               ? "Рулетка…"
-                              : `Открыть за ${formatRub(totalOpenPrice)} ₽`}
+                              : (
+                                  <>
+                                    Открыть за{" "}
+                                    <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em]" />
+                                  </>
+                                )}
                         </button>
                         <button
                           type="button"
@@ -946,7 +976,12 @@ export default function CaseOpenPage() {
                           <span aria-hidden>⚡</span>
                           {spinWaiting
                             ? "Открываем…"
-                            : `Быстро за ${formatRub(totalOpenPrice)} ₽`}
+                            : (
+                                <>
+                                  Быстро за{" "}
+                                  <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em]" />
+                                </>
+                              )}
                         </button>
                       </>
                     )}
@@ -966,26 +1001,45 @@ export default function CaseOpenPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {lootSortedForGrid.map((it, idx) => {
                   const bar = lootRarityBar[it.rarity] || lootRarityBar.common;
+                  const rk = normRarity(String(it.rarity ?? "common"));
+                  const glowRgb = lootSkinGlowRgb[rk] ?? lootSkinGlowRgb.common;
+                  const cellBg = `radial-gradient(ellipse 88% 80% at 50% 42%, rgb(${glowRgb} / 0.28) 0%, transparent 64%), rgba(0,0,0,0.38)`;
+                  const glowDelay = `${(idx % 9) * 0.38}s`;
                   return (
                     <div
                       key={`${it.name}-${idx}`}
                       className="group relative flex flex-col overflow-hidden rounded-xl border border-cb-stroke/70 bg-[#0a0e14]/90 transition hover:border-orange-500/30"
                     >
-                      <div className="absolute left-2 top-2 z-10 rounded-md bg-gradient-to-r from-orange-600/90 to-red-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md">
-                        {formatRub(it.sellPrice)} ₽
+                      <div className="absolute left-2 top-2 z-10 max-w-[calc(100%-0.75rem)] rounded-md bg-gradient-to-r from-orange-600/90 to-red-600/90 px-1.5 py-0.5 text-[10px] font-bold shadow-md">
+                        <SiteMoney
+                          value={it.sellPrice}
+                          className="text-white"
+                          iconClassName="h-2.5 w-2.5 shrink-0 brightness-110 contrast-125"
+                        />
                       </div>
-                      <div className="relative aspect-square w-full bg-black/35 p-2">
+                      <div
+                        className="relative isolate aspect-square w-full p-2"
+                        style={{ background: cellBg }}
+                      >
                         {it.image ? (
                           <Image
                             src={preferHighResSteamEconomyImage(it.image) ?? it.image}
                             alt=""
                             fill
-                            className={`object-contain p-1 transition group-hover:scale-105 ${SKIN_IMG_QUALITY_CLASS}`}
+                            className={`cb-loot-skin-thumb-glow relative z-[1] object-contain p-1 transition group-hover:scale-105 ${SKIN_IMG_QUALITY_CLASS}`}
                             quality={100}
                             unoptimized
+                            style={
+                              {
+                                ["--glow-rgb" as string]: glowRgb,
+                                animationDelay: glowDelay,
+                              } as React.CSSProperties
+                            }
                           />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-zinc-700">?</div>
+                          <div className="relative z-[1] flex h-full items-center justify-center text-zinc-600">
+                            ?
+                          </div>
                         )}
                       </div>
                       <div className="border-t border-cb-stroke/50 px-2 py-2">

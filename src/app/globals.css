@@ -162,6 +162,34 @@ body {
   }
 }
 
+/* «Содержимое кейса»: пульс кольорового ореолу навколо прев’ю (drop-shadow — видно й на непрозорих PNG). */
+@keyframes cb-loot-skin-thumb-glow-kf {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgb(var(--glow-rgb) / 0.38))
+      drop-shadow(0 0 22px rgb(var(--glow-rgb) / 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgb(var(--glow-rgb) / 0.62))
+      drop-shadow(0 0 36px rgb(var(--glow-rgb) / 0.34));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cb-loot-skin-thumb-glow {
+    animation: cb-loot-skin-thumb-glow-kf 3.4s ease-in-out infinite;
+    will-change: filter;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-loot-skin-thumb-glow {
+    animation: none;
+    filter: drop-shadow(0 0 14px rgb(var(--glow-rgb) / 0.48))
+      drop-shadow(0 0 28px rgb(var(--glow-rgb) / 0.22));
+  }
+}
+
 /* ——— Фонова гроза (під віньєткою cb-backdrop) ——— */
 @keyframes cb-storm-rain-fall {
   from {
@@ -285,7 +313,7 @@ body {
   }
 }
 
-/* Апгрейд: запрошення обрати ціль — великі «пливучі» стрілки вниз */
+/* Апгрейд: запрошення обрати ціль — ▲, рух угору */
 @keyframes ug-target-invite-chevron {
   0%,
   100% {
@@ -293,7 +321,7 @@ body {
     opacity: 0.35;
   }
   50% {
-    transform: translateY(14px) scale(1.12);
+    transform: translateY(-12px) scale(1.12);
     opacity: 1;
   }
 }
@@ -319,7 +347,7 @@ body {
   }
 }
 
-/* Апгрейд: взнос — стрілки вгору (обери предмети нижче в сітці). */
+/* Апгрейд: взнос — ▼, рух униз (до списку предметів). */
 @keyframes ug-stake-invite-chevron {
   0%,
   100% {
@@ -327,7 +355,7 @@ body {
     opacity: 0.35;
   }
   50% {
-    transform: translateY(-12px) scale(1.12);
+    transform: translateY(14px) scale(1.12);
     opacity: 1;
   }
 }

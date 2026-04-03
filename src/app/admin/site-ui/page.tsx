@@ -72,7 +72,8 @@ export default function AdminSiteUiPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Интерфейс и пополнение</h1>
         <p className="mt-2 max-w-xl text-sm text-zinc-400">
-          Масштабы карточек на главной и курс USD→₽ для крипто-пополнения (NOWPayments). Курс хранится в{" "}
+          Масштабы карточек на главной и курс USD→SC (зачисление на баланс) для крипто-пополнения (NOWPayments). Курс
+          хранится в{" "}
           <span className="font-mono text-zinc-300">siteUi.json</span>; значение из{" "}
           <span className="font-mono text-zinc-300">NOWPAYMENTS_RUB_PER_USD</span> в .env подставляется только
           если в файле курс ещё не задан.
@@ -93,7 +94,7 @@ export default function AdminSiteUiPage() {
             <h2 className="text-lg font-semibold text-white">Крипто-пополнение</h2>
             <label className="mt-3 block space-y-1">
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                Рублей за 1 USD (зачисление на баланс)
+                SC за 1 USD (зачисление на баланс)
               </span>
               <input
                 type="number"

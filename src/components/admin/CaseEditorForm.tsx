@@ -11,7 +11,7 @@ import {
   RARITY_OPTIONS,
 } from "@/lib/caseConfig";
 import { apiFetch, type ApiFieldErrors } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 import { MarketCsgoHashInput } from "@/components/admin/MarketCsgoHashInput";
 
 function formatZodDetails(d?: ApiFieldErrors): string | null {
@@ -63,7 +63,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
   );
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  /** Індекс рядка → ціна market.csgo (₽) або null */
+  /** Індекс рядка → ціна market.csgo (орієнтир, у SC) або null */
   const [rowMarketRub, setRowMarketRub] = useState<Record<number, number | null>>({});
   const [rowQuoteLoading, setRowQuoteLoading] = useState(false);
 
@@ -275,7 +275,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-            Цена (₽)
+            Цена (SC)
           </span>
           <input
             type="number"
@@ -517,7 +517,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
                     if (!q) return "—";
                     const rub = rowMarketRub[i];
                     if (rowQuoteLoading && rub === undefined) return "…";
-                    return rub != null ? `${formatRub(rub)} ₽` : "—";
+                    return rub != null ? formatSiteAmount(rub) : "—";
                   })()}
                 </span>
               </div>

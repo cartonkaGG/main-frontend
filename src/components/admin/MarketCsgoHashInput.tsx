@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 
 export type MarketSearchHit = { marketHashName: string; priceRub: number };
 
@@ -123,7 +123,7 @@ export function MarketCsgoHashInput({
                   {h.marketHashName}
                 </span>
                 <span className="shrink-0 font-mono tabular-nums text-emerald-400/95">
-                  {formatRub(h.priceRub)}&nbsp;₽
+                  {formatSiteAmount(h.priceRub)}
                 </span>
               </button>
             </li>
@@ -132,7 +132,7 @@ export function MarketCsgoHashInput({
       ) : null}
       {showHint ? (
         <p className="mt-1 text-[9px] text-zinc-600">
-          Введите 2+ символа — подсказки из RUB.json market.csgo (несколько слов через пробел).
+          Введите 2+ символа — подсказки из прайса market.csgo (несколько слов через пробел). Цены ориентировочные.
         </p>
       ) : null}
     </div>

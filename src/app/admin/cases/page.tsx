@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 import type { AdminCaseFull } from "@/lib/caseConfig";
 import Image from "next/image";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
@@ -82,7 +82,7 @@ export default function AdminCasesListPage() {
                 <td className="px-4 py-2 font-medium text-zinc-200">{c.name}</td>
                 <td className="px-4 py-2 font-mono text-xs text-zinc-500">{c.slug}</td>
                 <td className="px-4 py-2 font-mono text-cb-flame">
-                  {formatRub(c.price)} ₽
+                  {formatSiteAmount(c.price)}
                 </td>
                 <td className="px-4 py-2 text-zinc-400">{c.items?.length ?? 0}</td>
                 <td className="px-4 py-2 text-zinc-500">{c.accent}</td>

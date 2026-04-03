@@ -13,11 +13,17 @@ import {
 } from "react";
 import { normRarity, rarityCardFill } from "@/components/CaseRoulette";
 import { SiteShell } from "@/components/SiteShell";
+import { StormCoinSymbol } from "@/components/StormCoinSymbol";
 import { apiFetch, getToken } from "@/lib/api";
-import { formatRubSpaced } from "@/lib/money";
+import { formatRubSpaced, formatSiteAmountSpaced, SITE_CURRENCY_CODE } from "@/lib/money";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 import { requestAuthModal } from "@/lib/authModal";
 import { peekUpgradeBootstrapCache, writeUpgradeBootstrapCache } from "@/lib/upgradePrefetch";
+import {
+  getRouletteSoundMuted,
+  playUpgradeChipClick,
+  startRouletteSpinTicks,
+} from "@/lib/rouletteSound";
 
 type InvItem = {
   itemId: string;
@@ -48,24 +54,20 @@ const UPGRADE_PREVIEW_CARD =
 
 /** Цінник скінів у сітці апгрейду (компактний HUD). */
 const UPGRADE_SKIN_PRICE_TAG_GRID =
-  "flex max-w-[min(100%,11.5rem)] items-baseline gap-0.5 rounded-md border border-emerald-400/45 bg-gradient-to-b from-zinc-900/97 via-zinc-950/98 to-black/92 px-1.5 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_2px_8px_rgba(0,0,0,0.5),0_0_16px_rgba(52,211,153,0.14)] backdrop-blur-sm";
+  "inline-flex max-w-[min(100%,11.5rem)] items-center gap-0.5 rounded-md border border-emerald-400/45 bg-gradient-to-b from-zinc-900/97 via-zinc-950/98 to-black/92 px-1.5 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_2px_8px_rgba(0,0,0,0.5),0_0_16px_rgba(52,211,153,0.14)] backdrop-blur-sm";
 const UPGRADE_SKIN_PRICE_NUM =
   "whitespace-nowrap font-mono text-[10px] font-bold tabular-nums leading-none tracking-tight text-emerald-100 sm:text-[11px]";
-const UPGRADE_SKIN_PRICE_SYM =
-  "shrink-0 font-mono text-[8px] font-semibold leading-none text-emerald-400/85 sm:text-[9px]";
 /** Цінник у рядку списку (той самий стиль, трохи просторіше). */
 const UPGRADE_SKIN_PRICE_TAG_ROW =
-  "inline-flex max-w-full items-baseline gap-0.5 rounded-lg border border-emerald-400/40 bg-gradient-to-b from-zinc-900/95 to-black/90 px-2 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_14px_rgba(52,211,153,0.1)]";
+  "inline-flex max-w-full items-center gap-0.5 rounded-lg border border-emerald-400/40 bg-gradient-to-b from-zinc-900/95 to-black/90 px-2 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_14px_rgba(52,211,153,0.1)]";
 const UPGRADE_SKIN_PRICE_NUM_ROW =
   "whitespace-nowrap font-mono text-[11px] font-bold tabular-nums leading-none tracking-tight text-emerald-100 sm:text-[12px]";
-const UPGRADE_SKIN_PRICE_SYM_ROW = "shrink-0 font-mono text-[9px] font-semibold text-emerald-400/80";
 
 /** Цінник на міні-картці обраних предметів (компактніша шкала). */
 const UPGRADE_STAKE_MINI_PRICE_WRAP =
-  "flex max-w-[min(100%,9.5rem)] origin-top-right scale-[0.82] items-baseline gap-0.5 rounded-md border border-emerald-400/45 bg-gradient-to-b from-zinc-900/97 via-zinc-950/98 to-black/92 px-1 py-px shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_2px_8px_rgba(0,0,0,0.5),0_0_12px_rgba(52,211,153,0.12)] backdrop-blur-sm";
+  "inline-flex max-w-[min(100%,9.5rem)] origin-top-right scale-[0.82] items-center gap-0.5 rounded-md border border-emerald-400/45 bg-gradient-to-b from-zinc-900/97 via-zinc-950/98 to-black/92 px-1 py-px shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_2px_8px_rgba(0,0,0,0.5),0_0_12px_rgba(52,211,153,0.12)] backdrop-blur-sm";
 const UPGRADE_STAKE_MINI_PRICE_NUM =
   "whitespace-nowrap font-mono text-[9px] font-bold tabular-nums leading-none tracking-tight text-emerald-100";
-const UPGRADE_STAKE_MINI_PRICE_SYM = "shrink-0 font-mono text-[7px] font-semibold leading-none text-emerald-400/85";
 
 /** Мітка біля слайдера балансу */
 const UPGRADE_BOOST_BADGE =
@@ -73,11 +75,9 @@ const UPGRADE_BOOST_BADGE =
 
 /** Ціна внизу картки цілі — яскраво-жовтий акцент (як на референсі). */
 const UPGRADE_TARGET_CARD_PRICE_ROW =
-  "mt-auto flex shrink-0 items-baseline justify-center gap-1.5 pt-2";
+  "mt-auto flex shrink-0 items-center justify-center gap-1 self-center px-1 pt-2";
 const UPGRADE_TARGET_CARD_PRICE_NUM =
   "text-center font-mono text-base font-bold tabular-nums tracking-tight text-amber-400 [text-shadow:0_0_24px_rgba(251,191,36,0.25)] sm:text-lg";
-const UPGRADE_TARGET_CARD_PRICE_CUR =
-  "shrink-0 font-mono text-sm font-bold text-amber-400/95 sm:text-base";
 
 /** Червоне залиття обраної картки в сітці (над фоном і зображенням, під ціною та текстом). */
 const UPGRADE_GRID_SELECTED_OVERLAY = "pointer-events-none absolute inset-0 z-[1] bg-red-600/[0.44]";
@@ -540,12 +540,6 @@ function UpgradeGauge({
           </div>
         </div>
       </div>
-
-      {hasChance ? (
-        <p className="mt-3 max-w-[min(100%,280px)] px-1 text-center text-[9px] leading-snug text-zinc-600 sm:max-w-[300px]">
-          Итоговая вероятность по настройкам сайта (RTP) ниже; стрелка соответствует реальному броску.
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -623,8 +617,16 @@ export default function UpgradePage() {
   /** Після await порівнюємо з поточним станом, без застарілого `selected` у замиканні. */
   const selectedRef = useRef(selected);
   const balanceBoostPctRef = useRef(balanceBoostPct);
+  const spinSoundStopRef = useRef<(() => void) | null>(null);
   selectedRef.current = selected;
   balanceBoostPctRef.current = balanceBoostPct;
+
+  useEffect(() => {
+    return () => {
+      spinSoundStopRef.current?.();
+      spinSoundStopRef.current = null;
+    };
+  }, []);
 
   /**
    * Токен лише після mount: на SSR `getToken()` завжди null, у клієнта одразу може бути строка —
@@ -929,6 +931,7 @@ export default function UpgradePage() {
         else if (kind === "p50") id = pickTargetNearPrice(pool, stakePick, stakePick / 0.5);
         else if (kind === "p75") id = pickTargetNearPrice(pool, stakePick, stakePick / 0.75);
         if (id) {
+          playUpgradeChipClick(getRouletteSoundMuted());
           userClearedTargetRef.current = false;
           setTargetId(id);
           resetPickMeta();
@@ -981,12 +984,13 @@ export default function UpgradePage() {
     if (spinning) return;
     const row = inventory.find((x) => x.itemId === id);
     if (row?.withdrawalPending) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < 6) next.add(id);
-      return next;
-    });
+    const prev = selectedRef.current;
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else if (next.size < 6) next.add(id);
+    else return;
+    playUpgradeChipClick(getRouletteSoundMuted());
+    setSelected(next);
     setShowResult(null);
     setLastRoll(null);
     setServerPWin(null);
@@ -1036,6 +1040,11 @@ export default function UpgradePage() {
       setServerPWin(Math.min(1, Math.max(0, data.threshold)));
     }
     if (holdArc > 0) setGaugeHoldDisplayPct(holdArc);
+    spinSoundStopRef.current?.();
+    spinSoundStopRef.current = startRouletteSpinTicks(
+      UPGRADE_SPIN_DURATION_MS,
+      getRouletteSoundMuted(),
+    );
     setSpinning(true);
     window.setTimeout(() => {
       void (async () => {
@@ -1087,12 +1096,26 @@ export default function UpgradePage() {
                   <div className="pointer-events-none relative z-[2] mb-1.5 shrink-0 border-b border-white/[0.06] pb-2 text-center">
                     <p className="text-[10px] font-medium text-zinc-500">Всего в апгрейд</p>
                     {balanceBoostRub > 0 ? (
-                      <p className="mt-1 text-[10px] text-zinc-600">
-                        Предметы {formatRubSpaced(inputSum)} ₽ · баланс +{formatRubSpaced(balanceBoostRub)} ₽
+                      <p className="mt-1 flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5 text-[10px] text-zinc-600">
+                        <span>Предметы</span>
+                        <span className="inline-flex items-center gap-0.5 font-mono text-zinc-400">
+                          <span className="tabular-nums">{formatRubSpaced(inputSum)}</span>
+                          <StormCoinSymbol className="h-2.5 w-2.5 shrink-0 opacity-85" />
+                        </span>
+                        <span aria-hidden>·</span>
+                        <span>баланс +</span>
+                        <span className="inline-flex items-center gap-0.5 font-mono text-zinc-400">
+                          <span className="tabular-nums">{formatRubSpaced(balanceBoostRub)}</span>
+                          <StormCoinSymbol className="h-2.5 w-2.5 shrink-0 opacity-85" />
+                        </span>
                       </p>
                     ) : null}
-                    <p className="mt-1 font-mono text-lg font-bold tabular-nums tracking-tight text-emerald-400 [text-shadow:0_0_20px_rgba(52,211,153,0.2)] sm:text-xl">
-                      {formatRubSpaced(stakeTotal)} ₽
+                    <p
+                      className="mt-1 flex items-center justify-center gap-1.5 font-mono text-lg font-bold tabular-nums tracking-tight text-emerald-400 [text-shadow:0_0_20px_rgba(52,211,153,0.2)] sm:text-xl"
+                      aria-label={formatSiteAmountSpaced(stakeTotal)}
+                    >
+                      <span className="tabular-nums">{formatRubSpaced(stakeTotal)}</span>
+                      <StormCoinSymbol className="h-[1.15em] w-[1.15em] shrink-0 drop-shadow-[0_0_10px_rgba(52,211,153,0.35)] sm:h-[1.12em] sm:w-[1.12em]" />
                     </p>
                     {selected.size > 0 ? (
                       <p className="mt-0.5 text-[10px] text-zinc-600">{selected.size} из 6 предметов</p>
@@ -1108,13 +1131,13 @@ export default function UpgradePage() {
                           aria-hidden
                         >
                           <span className="ug-stake-invite-chevron ug-stake-invite-chevron--1 text-[28px] leading-none sm:text-[34px]">
-                            ▲
+                            ▼
                           </span>
                           <span className="ug-stake-invite-chevron ug-stake-invite-chevron--2 text-[24px] leading-none sm:text-[30px]">
-                            ▲
+                            ▼
                           </span>
                           <span className="ug-stake-invite-chevron ug-stake-invite-chevron--3 text-[20px] leading-none sm:text-[26px]">
-                            ▲
+                            ▼
                           </span>
                         </div>
                         <p className="max-w-[260px] text-center text-[11px] leading-snug text-zinc-500 sm:text-xs">
@@ -1163,10 +1186,10 @@ export default function UpgradePage() {
 
                                 <div
                                   className={`pointer-events-none absolute right-0.5 top-0.5 z-[2] scale-90 ${UPGRADE_STAKE_MINI_PRICE_WRAP}`}
-                                  aria-label={`${formatRubSpaced(chipRub)} ₽`}
+                                  aria-label={formatSiteAmountSpaced(chipRub)}
                                 >
-                                  <span className={UPGRADE_STAKE_MINI_PRICE_NUM}>{formatRubSpaced(chipRub)}</span>
-                                  <span className={UPGRADE_STAKE_MINI_PRICE_SYM}>₽</span>
+                                  <span className={`min-w-0 ${UPGRADE_STAKE_MINI_PRICE_NUM}`}>{formatRubSpaced(chipRub)}</span>
+                                  <StormCoinSymbol className="h-[8px] w-[8px] shrink-0 opacity-90" />
                                 </div>
 
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1 pb-1 pt-4">
@@ -1196,7 +1219,7 @@ export default function UpgradePage() {
                 <div className="mt-4 pt-2">
                   <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-zinc-500">
                     <span>Добавить баланс к шансу</span>
-                    <span className={UPGRADE_BOOST_BADGE}>{formatRubSpaced(balanceBoostRub)} ₽</span>
+                    <span className={UPGRADE_BOOST_BADGE}>{formatSiteAmountSpaced(balanceBoostRub)}</span>
                   </div>
                   <input
                     type="range"
@@ -1208,7 +1231,7 @@ export default function UpgradePage() {
                     className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-cb-stroke/80 accent-red-600 disabled:cursor-not-allowed disabled:opacity-45"
                   />
                   <p className="mt-1 text-[10px] text-zinc-600">
-                    Списывается с баланса при апгрейде (до {formatRubSpaced(balance)} ₽). Увеличивает шанс так же, как
+                    Списывается с баланса при апгрейде (до {formatSiteAmountSpaced(balance)}). Увеличивает шанс так же, как
                     рост стоимости вклада.
                   </p>
                 </div>
@@ -1314,9 +1337,9 @@ export default function UpgradePage() {
                           </div>
                         );
                       })()}
-                      <div className={`relative z-[2] w-full ${UPGRADE_TARGET_CARD_PRICE_ROW}`}>
-                        <span className={UPGRADE_TARGET_CARD_PRICE_NUM}>{formatRubSpaced(target.price)}</span>
-                        <span className={UPGRADE_TARGET_CARD_PRICE_CUR}>₽</span>
+                      <div className={`relative z-[2] ${UPGRADE_TARGET_CARD_PRICE_ROW}`}>
+                        <span className={`min-w-0 ${UPGRADE_TARGET_CARD_PRICE_NUM} text-left`}>{formatRubSpaced(target.price)}</span>
+                        <StormCoinSymbol className="h-[1em] w-[1em] shrink-0 sm:h-[1.12em] sm:w-[1.12em]" />
                       </div>
                     </>
                   ) : (
@@ -1326,13 +1349,13 @@ export default function UpgradePage() {
                         aria-hidden
                       >
                         <span className="ug-target-invite-chevron ug-target-invite-chevron--1 text-[28px] leading-none sm:text-[34px]">
-                          ▼
+                          ▲
                         </span>
                         <span className="ug-target-invite-chevron ug-target-invite-chevron--2 text-[24px] leading-none sm:text-[30px]">
-                          ▼
+                          ▲
                         </span>
                         <span className="ug-target-invite-chevron ug-target-invite-chevron--3 text-[20px] leading-none sm:text-[26px]">
-                          ▼
+                          ▲
                         </span>
                       </div>
                       <p className="max-w-[260px] text-center text-[11px] leading-snug text-zinc-500 sm:text-xs">
@@ -1482,10 +1505,10 @@ export default function UpgradePage() {
 
                             <div
                               className={`pointer-events-none absolute right-1 top-1 z-[2] ${UPGRADE_SKIN_PRICE_TAG_GRID}`}
-                              aria-label={`${formatRubSpaced(chipRub)} ₽`}
+                              aria-label={formatSiteAmountSpaced(chipRub)}
                             >
-                              <span className={UPGRADE_SKIN_PRICE_NUM}>{formatRubSpaced(chipRub)}</span>
-                              <span className={UPGRADE_SKIN_PRICE_SYM}>₽</span>
+                              <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM}`}>{formatRubSpaced(chipRub)}</span>
+                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
                             </div>
 
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 px-1.5 pb-1.5 pt-3">
@@ -1562,8 +1585,8 @@ export default function UpgradePage() {
                           <div className="flex items-start justify-between gap-2">
                             <p className="min-w-0 flex-1 truncate text-[11px] text-zinc-100">{it.name}</p>
                             <span className={`shrink-0 ${UPGRADE_SKIN_PRICE_TAG_ROW}`}>
-                              <span className={UPGRADE_SKIN_PRICE_NUM_ROW}>{formatRubSpaced(chipRub)}</span>
-                              <span className={UPGRADE_SKIN_PRICE_SYM_ROW}>₽</span>
+                              <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM_ROW}`}>{formatRubSpaced(chipRub)}</span>
+                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
                             </span>
                           </div>
                           {locked ? (
@@ -1628,7 +1651,7 @@ export default function UpgradePage() {
                     value={priceMin}
                     disabled={spinning}
                     onChange={(e) => setPriceMin(e.target.value)}
-                    placeholder="₽"
+                    placeholder={SITE_CURRENCY_CODE}
                     className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white disabled:cursor-not-allowed disabled:opacity-45"
                   />
                 </label>
@@ -1640,7 +1663,7 @@ export default function UpgradePage() {
                     value={priceMax}
                     disabled={spinning}
                     onChange={(e) => setPriceMax(e.target.value)}
-                    placeholder="₽"
+                    placeholder={SITE_CURRENCY_CODE}
                     className="w-24 rounded-lg border border-cb-stroke bg-black/50 px-2 py-1.5 text-[12px] text-white disabled:cursor-not-allowed disabled:opacity-45"
                   />
                 </label>
@@ -1699,6 +1722,7 @@ export default function UpgradePage() {
                           disabled={spinning}
                           onClick={() => {
                             const nextId = selected ? "" : t.id;
+                            playUpgradeChipClick(getRouletteSoundMuted());
                             userClearedTargetRef.current = nextId === "";
                             setTargetId(nextId);
                             setShowResult(null);
@@ -1736,10 +1760,10 @@ export default function UpgradePage() {
 
                             <div
                               className={`pointer-events-none absolute right-1 top-1 z-[2] ${UPGRADE_SKIN_PRICE_TAG_GRID}`}
-                              aria-label={`${formatRubSpaced(t.price)} ₽`}
+                              aria-label={formatSiteAmountSpaced(t.price)}
                             >
-                              <span className={UPGRADE_SKIN_PRICE_NUM}>{formatRubSpaced(t.price)}</span>
-                              <span className={UPGRADE_SKIN_PRICE_SYM}>₽</span>
+                              <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM}`}>{formatRubSpaced(t.price)}</span>
+                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
                             </div>
 
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 px-1.5 pb-1.5 pt-3">
@@ -1774,6 +1798,7 @@ export default function UpgradePage() {
                           disabled={spinning}
                           onClick={() => {
                             const nextId = selected ? "" : t.id;
+                            playUpgradeChipClick(getRouletteSoundMuted());
                             userClearedTargetRef.current = nextId === "";
                             setTargetId(nextId);
                             setShowResult(null);
@@ -1818,8 +1843,8 @@ export default function UpgradePage() {
                                 {t.name}
                               </p>
                               <span className={`shrink-0 ${UPGRADE_SKIN_PRICE_TAG_ROW}`}>
-                                <span className={UPGRADE_SKIN_PRICE_NUM_ROW}>{formatRubSpaced(t.price)}</span>
-                                <span className={UPGRADE_SKIN_PRICE_SYM_ROW}>₽</span>
+                                <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM_ROW}`}>{formatRubSpaced(t.price)}</span>
+                                <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
                               </span>
                             </div>
                           </div>

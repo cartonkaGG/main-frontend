@@ -47,7 +47,7 @@ export default function AdminPromosPage() {
             <tr className="border-b border-cb-stroke text-xs uppercase tracking-wider text-zinc-500">
               <th className="px-4 py-3">Код</th>
               <th className="px-4 py-3">Тип</th>
-              <th className="px-4 py-3">Бонус ₽</th>
+              <th className="px-4 py-3">Бонус (SC)</th>
               <th className="px-4 py-3">%</th>
               <th className="px-4 py-3">Активен</th>
               <th className="px-4 py-3">Баннер</th>

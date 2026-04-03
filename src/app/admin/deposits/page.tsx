@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { SITE_CURRENCY_CODE } from "@/lib/money";
 
 type Entry = {
   id: string;
@@ -94,7 +95,7 @@ export default function AdminDepositsPage() {
               <th className="px-3 py-2.5">Час</th>
               <th className="px-3 py-2.5">Тип</th>
               <th className="px-3 py-2.5">Пользователь</th>
-              <th className="px-3 py-2.5">Сумма ₽</th>
+              <th className="px-3 py-2.5">Сумма ({SITE_CURRENCY_CODE})</th>
               <th className="px-3 py-2.5">Детали</th>
             </tr>
           </thead>
@@ -118,16 +119,16 @@ export default function AdminDepositsPage() {
               const rubLine =
                 e.kind === "crypto"
                   ? e.status === "pending"
-                    ? `ожидает (база ${e.creditRubBase ?? "—"} ₽)`
-                    : `${rub ?? "—"} ₽`
-                  : `${rub ?? "—"} ₽`;
+                    ? `ожидает (база ${e.creditRubBase ?? "—"} ${SITE_CURRENCY_CODE})`
+                    : `${rub ?? "—"} ${SITE_CURRENCY_CODE}`
+                  : `${rub ?? "—"} ${SITE_CURRENCY_CODE}`;
 
               let detail = "";
               if (e.kind === "crypto") {
                 detail = `${e.amountUsd ?? "—"} USD · order ${e.orderId || "—"}`;
                 if (e.paymentId) detail += ` · payment ${e.paymentId}`;
                 if (e.status === "credited" && (e.bonusRub ?? 0) > 0) {
-                  detail += ` · бонус ${e.depositPercent}% (+${e.bonusRub} ₽)`;
+                  detail += ` · бонус ${e.depositPercent}% (+${e.bonusRub} ${SITE_CURRENCY_CODE})`;
                 }
               } else if (e.kind === "promo") {
                 detail = e.promoCode ? `код ${e.promoCode}` : e.promoId || "промо";

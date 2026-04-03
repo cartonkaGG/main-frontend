@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { AdminPromo } from "@/lib/promoAdmin";
 import { apiFetch } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 
 type Props = { mode: "new" | "edit"; initial?: AdminPromo | null };
 
@@ -136,10 +136,10 @@ export function PromoEditorForm({ mode, initial }: Props) {
         {rewardType === "balance" ? (
           <>
             Начисление: фикс{" "}
-            <span className="font-mono text-zinc-400">{formatRub(Number(extraFlatRub) || 0)} ₽</span> +{" "}
+            <span className="font-mono text-zinc-400">{formatSiteAmount(Number(extraFlatRub) || 0)}</span> +{" "}
             <span className="font-mono text-zinc-400">{bonusPercent || 0}%</span> от базы{" "}
-            <span className="font-mono text-zinc-400">{formatRub(Number(percentBaseRub) || 0)} ₽</span> → итого ≈{" "}
-            <span className="font-mono text-cb-flame">{formatRub(previewBalance)} ₽</span>
+            <span className="font-mono text-zinc-400">{formatSiteAmount(Number(percentBaseRub) || 0)}</span> → итого ≈{" "}
+            <span className="font-mono text-cb-flame">{formatSiteAmount(previewBalance)}</span>
           </>
         ) : (
           <>
@@ -208,7 +208,7 @@ export function PromoEditorForm({ mode, initial }: Props) {
           <>
             <label className="block space-y-1">
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                База для процента (₽)
+                База для процента (SC)
               </span>
               <input
                 type="number"
@@ -220,7 +220,7 @@ export function PromoEditorForm({ mode, initial }: Props) {
             </label>
             <label className="block space-y-1">
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                Доп. фикс (₽)
+                Доп. фикс (SC)
               </span>
               <input
                 type="number"

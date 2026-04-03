@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
+import { SITE_CURRENCY_CODE } from "@/lib/money";
 import { requestAuthModal } from "@/lib/authModal";
 
 type CryptoOpt = { payCurrency: string; title: string; sub: string };
@@ -110,7 +111,7 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
   if (!open) return null;
 
   const minUsd = cfg?.minUsd ?? 10;
-  /** Тільки з відповіді `/api/nowpayments/config` — без «стрибка» після завантаження не показуємо прев’ю в ₽. */
+  /** Тільки з відповіді `/api/nowpayments/config` — без «стрибка» після завантаження не показуємо прев’ю в SC. */
   const rubPerServer = cfg?.rubPerUsd;
   const cryptos = cfg?.cryptos?.length ? cfg.cryptos : [];
 
@@ -219,7 +220,7 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
             </h2>
             <p className="mb-5 text-[11px] text-zinc-500">
               Оплата через NOWPayments. Минимум <span className="font-mono text-zinc-400">{minUsd} USD</span>.
-              Зачисление в ₽ по курсу, который задаёт админ (Админка → Интерфейс / site-ui).
+              Зачисление в {SITE_CURRENCY_CODE} (storm-coin) по курсу, который задаёт админ (Админка → Интерфейс / site-ui).
             </p>
 
             {err ? (
@@ -308,19 +309,20 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                       <>
                         <p>
                           База:{" "}
-                          <span className="font-mono text-zinc-400">{preview.creditRubBase}</span> ₽ · курс{" "}
-                          <span className="font-mono text-zinc-500">{preview.rubPerUsd.toFixed(2)}</span> ₽/USD (курс
-                          сайта)
+                          <span className="font-mono text-zinc-400">{preview.creditRubBase}</span> {SITE_CURRENCY_CODE} ·
+                          курс{" "}
+                          <span className="font-mono text-zinc-500">{preview.rubPerUsd.toFixed(2)}</span>{" "}
+                          {SITE_CURRENCY_CODE}/USD (курс сайта)
                         </p>
                         {preview.bonusPercent > 0 ? (
                           <p className="text-emerald-200/90">
                             Бонус по промокоду +{preview.bonusPercent}%:{" "}
-                            <span className="font-mono">+{preview.bonusRub}</span> ₽
+                            <span className="font-mono">+{preview.bonusRub}</span> {SITE_CURRENCY_CODE}
                           </p>
                         ) : null}
                         <p className="font-medium text-zinc-300">
                           Итого на баланс:{" "}
-                          <span className="font-mono text-white">{preview.totalRub}</span> ₽
+                          <span className="font-mono text-white">{preview.totalRub}</span> {SITE_CURRENCY_CODE}
                         </p>
                         {preview.promoError ? (
                           <p className="text-amber-200/90">{preview.promoError}</p>
@@ -330,14 +332,15 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                       <p className="text-zinc-500">Расчёт суммы…</p>
                     ) : guestPreviewRub != null && rubPerServer != null ? (
                       <p>
-                        ≈ <span className="font-mono text-zinc-400">{guestPreviewRub}</span> ₽ без бонуса (войдите,
-                        чтобы увидеть итог с промокодом). Курс{" "}
-                        <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span> ₽/USD (курс сайта)
+                        ≈ <span className="font-mono text-zinc-400">{guestPreviewRub}</span> {SITE_CURRENCY_CODE} без
+                        бонуса (войдите, чтобы увидеть итог с промокодом). Курс{" "}
+                        <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span>{" "}
+                        {SITE_CURRENCY_CODE}/USD (курс сайта)
                       </p>
                     ) : rubPerServer != null ? (
                       <p>
-                        Курс <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span> ₽/USD (курс
-                        сайта). Введите сумму в USD.
+                        Курс <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span>{" "}
+                        {SITE_CURRENCY_CODE}/USD (курс сайта). Введите сумму в USD.
                       </p>
                     ) : (
                       <p className="text-zinc-600">Загрузка курса…</p>

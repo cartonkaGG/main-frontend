@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 
 type InventoryItem = {
@@ -229,7 +229,7 @@ export default function AdminUsersPage() {
           </p>
           {summary ? (
             <p className="mt-2 font-mono text-2xl font-black text-white">
-              {formatRub(summary.totalBalance)} ₽
+              {formatSiteAmount(summary.totalBalance)}
             </p>
           ) : summaryErr ? (
             <p className="mt-2 text-xs text-red-300">{summaryErr}</p>
@@ -299,7 +299,7 @@ export default function AdminUsersPage() {
                   )}
                   {data.user.upgradeRunBaseline != null && Number.isFinite(data.user.upgradeRunBaseline) ? (
                     <p className="mt-1 text-[10px] text-violet-400/90">
-                      upgrade baseline: {formatRub(data.user.upgradeRunBaseline)} ₽
+                      upgrade baseline: {formatSiteAmount(data.user.upgradeRunBaseline)}
                     </p>
                   ) : null}
                 </div>
@@ -308,7 +308,7 @@ export default function AdminUsersPage() {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-orange-300/80">Баланс</p>
                   <p className="mt-0.5 font-mono text-lg font-black text-white">
-                    {formatRub(data.user.balance)} ₽
+                    {formatSiteAmount(data.user.balance)}
                   </p>
                 </div>
                 <div>
@@ -320,7 +320,7 @@ export default function AdminUsersPage() {
                     Потрачено / выиграно
                   </p>
                   <p className="mt-0.5 font-mono text-xs text-zinc-300">
-                    {formatRub(data.user.totalSpent)} / {formatRub(data.user.totalWon)} ₽
+                    {formatSiteAmount(data.user.totalSpent)} / {formatSiteAmount(data.user.totalWon)}
                   </p>
                 </div>
                 <div>
@@ -335,7 +335,7 @@ export default function AdminUsersPage() {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Нетто (derived)</p>
                   <p className="mt-0.5 font-mono text-xs font-semibold text-cb-flame">
-                    {formatRub(data.derived.net)} ₽
+                    {formatSiteAmount(data.derived.net)}
                   </p>
                 </div>
                 <div>
@@ -371,7 +371,7 @@ export default function AdminUsersPage() {
                     </select>
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold text-zinc-500">Значение (₽)</span>
+                    <span className="text-xs font-bold text-zinc-500">Значение (SC)</span>
                     <input
                       value={balanceValue}
                       onChange={(e) => setBalanceValue(e.target.value)}
@@ -510,7 +510,7 @@ export default function AdminUsersPage() {
                     <p className="mt-1 text-[11px] text-sky-500/85">{data.user.bestItem.dmarketTitle}</p>
                   ) : null}
                   <p className="mt-2 font-mono text-2xl font-black text-cb-flame">
-                    {formatRub(data.user.bestItem.sellPrice)} ₽
+                    {formatSiteAmount(data.user.bestItem.sellPrice)}
                   </p>
                 </div>
                 <div
@@ -570,7 +570,7 @@ export default function AdminUsersPage() {
                         <p className="truncate text-sm font-semibold text-white">{it.name}</p>
                         <p className="mt-1 text-xs text-zinc-300">
                           Продажа:{" "}
-                          <span className="font-mono">{formatRub(it.sellPrice)} ₽</span>
+                          <span className="font-mono">{formatSiteAmount(it.sellPrice)}</span>
                           {it.rarity ? (
                             <span className="text-zinc-500"> · {it.rarity}</span>
                           ) : null}
@@ -629,10 +629,10 @@ export default function AdminUsersPage() {
                         <td className="px-4 py-2">{l.itemName}</td>
                         <td className="px-4 py-2 text-xs text-zinc-400">{l.rarity || "—"}</td>
                         <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                          {formatRub(Number(l.pricePaid) || 0)} ₽
+                          {formatSiteAmount(Number(l.pricePaid) || 0)}
                         </td>
                         <td className="px-4 py-2 font-mono text-cb-flame">
-                          {formatRub(l.sellPrice)} ₽
+                          {formatSiteAmount(l.sellPrice)}
                         </td>
                       </tr>
                     ))}
@@ -672,18 +672,18 @@ export default function AdminUsersPage() {
                           )}
                         </td>
                         <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                          {formatRub(u.stakeTotal)} ₽
+                          {formatSiteAmount(u.stakeTotal)}
                           {u.balanceBoostRub ? (
                             <span className="text-[10px] text-violet-400/80">
                               {" "}
-                              +boost {formatRub(u.balanceBoostRub)}
+                              +boost {formatSiteAmount(u.balanceBoostRub)}
                             </span>
                           ) : null}
                         </td>
                         <td className="px-4 py-2">
                           <div className="max-w-[240px]">{u.targetName || "—"}</div>
                           <div className="font-mono text-xs text-cb-flame/90">
-                            {formatRub(u.targetPrice)} ₽
+                            {formatSiteAmount(u.targetPrice)}
                           </div>
                           {u.targetRarity ? (
                             <div className="text-[10px] text-zinc-600">{u.targetRarity}</div>
@@ -715,7 +715,7 @@ export default function AdminUsersPage() {
                         <th className="px-4 py-3">Дата</th>
                         <th className="px-4 py-3">Order</th>
                         <th className="px-4 py-3">Статус</th>
-                        <th className="px-4 py-3">Кредит ₽</th>
+                        <th className="px-4 py-3">Кредит (SC)</th>
                         <th className="px-4 py-3">USD</th>
                         <th className="px-4 py-3">Payment ID</th>
                         <th className="px-4 py-3">Промо</th>
@@ -741,7 +741,7 @@ export default function AdminUsersPage() {
                             ) : null}
                           </td>
                           <td className="px-4 py-2 font-mono text-emerald-300/90">
-                            {formatRub(o.creditRubBase)} ₽
+                            {formatSiteAmount(o.creditRubBase)}
                             {o.depositPercent > 0 ? (
                               <span className="text-[10px] text-zinc-500"> +{o.depositPercent}%</span>
                             ) : null}
@@ -795,7 +795,7 @@ export default function AdminUsersPage() {
                           <td className="px-4 py-2">
                             <div className="max-w-[220px]">{w.itemName || "—"}</div>
                             <div className="font-mono text-xs text-cb-flame/90">
-                              {formatRub(w.itemSellPrice)} ₽
+                              {formatSiteAmount(w.itemSellPrice)}
                             </div>
                             {w.lastError ? (
                               <div className="mt-1 max-w-[280px] text-[10px] text-red-400/90">{w.lastError}</div>
@@ -838,7 +838,7 @@ export default function AdminUsersPage() {
                             {p.promoId || "—"}
                           </td>
                           <td className="px-4 py-2 font-mono text-[10px] text-zinc-600">{p.userSub}</td>
-                          <td className="px-4 py-2 font-mono text-emerald-300/90">+{formatRub(p.grant)} ₽</td>
+                          <td className="px-4 py-2 font-mono text-emerald-300/90">+{formatSiteAmount(p.grant)}</td>
                           <td className="px-4 py-2 text-xs text-zinc-400">
                             {p.rewardType || "—"}
                             {p.depositPercent != null && p.depositPercent > 0 ? (
@@ -882,7 +882,7 @@ export default function AdminUsersPage() {
                           </td>
                           <td className="px-4 py-2 text-xs text-zinc-400">{l.rarity || "—"}</td>
                           <td className="px-4 py-2 font-mono text-cb-flame">
-                            {formatRub(l.sellPrice)} ₽
+                            {formatSiteAmount(l.sellPrice)}
                           </td>
                         </tr>
                       ))}

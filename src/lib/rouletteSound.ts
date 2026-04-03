@@ -97,3 +97,35 @@ export function startRouletteSpinTicks(
     }
   };
 }
+
+/** Короткий «клік» при виборі скінів на апгрейді (тихіше за кроки рулетки). */
+export function playUpgradeChipClick(muted: boolean): void {
+  if (muted || typeof window === "undefined") return;
+
+  const AC =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return;
+
+  const ctx = new AC();
+  void ctx.resume().catch(() => {});
+
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(520 + Math.random() * 40, t);
+  o.frequency.exponentialRampToValueAtTime(280, t + 0.045);
+
+  g.gain.setValueAtTime(0.035, t);
+  g.gain.exponentialRampToValueAtTime(0.0012, t + 0.055);
+
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start(t);
+  o.stop(t + 0.06);
+
+  window.setTimeout(() => {
+    ctx.close().catch(() => {});
+  }, 140);
+}

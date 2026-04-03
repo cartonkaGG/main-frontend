@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { formatSiteAmount } from "@/lib/money";
 import { MarketCsgoHashInput } from "@/components/admin/MarketCsgoHashInput";
 
 type ItemSnap = {
@@ -340,7 +340,7 @@ export default function AdminWithdrawalsPage() {
             Подтверждение вызывает <span className="font-mono text-zinc-400">GET /api/v2/buy-for</span> с вашего
             аккаунта market.csgo: покупка самого дешёвого лота по <span className="font-mono">market_hash_name</span> и
             отправка на trade URL игрока. Параметр <span className="font-mono">price</span> — максимум в копейках; если
-            биржа пишет «не найдено по цене» — увеличьте <span className="font-semibold text-zinc-300">Макс. цена ₽</span>{" "}
+            биржа пишет «не найдено по цене» — увеличьте <span className="font-semibold text-zinc-300">Макс. цена (SC)</span>{" "}
             (цена на сайте часто ниже реального ордербука). Нужен баланс на маркете и{" "}
             <span className="font-mono">MARKET_CSGO_API_KEY</span> в .env. Лимит API: не более 5 запросов/с. Если биржа
             пишет о закрытом инвентаре — у игрока в Steam должен быть{" "}
@@ -398,7 +398,7 @@ export default function AdminWithdrawalsPage() {
               <th className="px-3 py-2.5">Игрок</th>
               <th className="px-3 py-2.5">Предмет</th>
               <th className="px-3 py-2.5">Trade URL</th>
-              <th className="px-3 py-2.5">Market hash / макс. ₽</th>
+              <th className="px-3 py-2.5">Market hash / макс. (SC)</th>
               <th className="px-3 py-2.5">Действия</th>
             </tr>
           </thead>
@@ -449,7 +449,7 @@ export default function AdminWithdrawalsPage() {
                   <td className="px-3 py-2.5 text-zinc-300">
                     <div className="max-w-[180px] font-medium leading-tight">{snap.name || "—"}</div>
                     <div className="mt-0.5 font-mono text-[10px] text-cb-flame/90">
-                      {formatRub(Number(snap.sellPrice) || 0)} ₽
+                      {formatSiteAmount(Number(snap.sellPrice) || 0)}
                     </div>
                   </td>
                   <td className="px-3 py-2.5">
@@ -477,7 +477,7 @@ export default function AdminWithdrawalsPage() {
                           inputClassName="w-full max-w-[280px] rounded border border-cb-stroke/70 bg-black/50 px-2 py-1 font-mono text-[10px] text-zinc-200"
                         />
                         <input
-                          placeholder="Макс. цена ₽ (реком.+15–40%)"
+                          placeholder="Макс. цена SC (реком.+15–40%)"
                           value={inputs.maxPriceRub}
                           onChange={(e) =>
                             setRowInputs((prev) => ({
@@ -584,7 +584,7 @@ export default function AdminWithdrawalsPage() {
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Баланс</p>
                         <p className="font-mono font-semibold text-emerald-300">
-                          {formatRub(inspectData.user.balance)} ₽
+                          {formatSiteAmount(inspectData.user.balance)}
                         </p>
                       </div>
                       <div>
@@ -594,7 +594,7 @@ export default function AdminWithdrawalsPage() {
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Потрачено / выиграно</p>
                         <p className="font-mono text-xs text-zinc-300">
-                          {formatRub(inspectData.user.totalSpent)} / {formatRub(inspectData.user.totalWon)} ₽
+                          {formatSiteAmount(inspectData.user.totalSpent)} / {formatSiteAmount(inspectData.user.totalWon)}
                         </p>
                       </div>
                       <div>
@@ -606,7 +606,7 @@ export default function AdminWithdrawalsPage() {
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Net (derived)</p>
                         <p className="font-mono text-xs text-zinc-300">
-                          {formatRub(inspectData.derived?.net ?? 0)} ₽
+                          {formatSiteAmount(inspectData.derived?.net ?? 0)}
                         </p>
                       </div>
                     </div>
@@ -625,7 +625,7 @@ export default function AdminWithdrawalsPage() {
                           >
                             <span className="min-w-0 truncate text-zinc-200">{it.name}</span>
                             <span className="shrink-0 font-mono text-cb-flame/90">
-                              {formatRub(it.sellPrice)} ₽
+                              {formatSiteAmount(it.sellPrice)}
                             </span>
                           </li>
                         ))}
@@ -649,7 +649,7 @@ export default function AdminWithdrawalsPage() {
                             <span className={o.credited ? "text-emerald-400/95" : "text-amber-400/90"}>
                               {o.credited ? "✓" : "…"}
                             </span>{" "}
-                            <span className="font-mono text-zinc-300">{formatRub(o.creditRubBase)} ₽</span>
+                            <span className="font-mono text-zinc-300">{formatSiteAmount(o.creditRubBase)}</span>
                             <span className="text-zinc-600"> · {o.amountUsd} USD</span>
                             {o.paymentId ? (
                               <span className="ml-1 font-mono text-[9px] text-zinc-600">{o.paymentId}</span>
@@ -675,7 +675,7 @@ export default function AdminWithdrawalsPage() {
                             </span>{" "}
                             <span className="font-semibold text-zinc-200">{wd.status}</span> —{" "}
                             <span className="text-zinc-300">{wd.itemName || "—"}</span>{" "}
-                            <span className="text-cb-flame/85">{formatRub(wd.itemSellPrice)} ₽</span>
+                            <span className="text-cb-flame/85">{formatSiteAmount(wd.itemSellPrice)}</span>
                             {wd.transferId ? (
                               <span className="ml-1 font-mono text-[9px] text-zinc-600">лот {wd.transferId}</span>
                             ) : null}
@@ -703,7 +703,7 @@ export default function AdminWithdrawalsPage() {
                             </span>{" "}
                             <span className="text-zinc-300">{log.caseName || log.caseSlug}</span> →{" "}
                             <span className="text-zinc-200">{log.itemName}</span>{" "}
-                            <span className="text-cb-flame/80">({formatRub(log.sellPrice)} ₽)</span>
+                            <span className="text-cb-flame/80">({formatSiteAmount(log.sellPrice)})</span>
                           </li>
                         ))}
                       </ul>
@@ -724,7 +724,7 @@ export default function AdminWithdrawalsPage() {
                               {log.at?.replace("T", " ").slice(0, 19)}
                             </span>{" "}
                             {log.name}{" "}
-                            <span className="text-cb-flame/80">{formatRub(log.sellPrice)} ₽</span>
+                            <span className="text-cb-flame/80">{formatSiteAmount(log.sellPrice)}</span>
                           </li>
                         ))}
                       </ul>
@@ -745,7 +745,7 @@ export default function AdminWithdrawalsPage() {
                               {log.at?.replace("T", " ").slice(0, 19)}
                             </span>{" "}
                             {log.promoId ? <span className="text-zinc-500">{log.promoId} </span> : null}
-                            <span className="text-emerald-400/90">+{formatRub(log.grant)} ₽</span>
+                            <span className="text-emerald-400/90">+{formatSiteAmount(log.grant)}</span>
                           </li>
                         ))}
                       </ul>

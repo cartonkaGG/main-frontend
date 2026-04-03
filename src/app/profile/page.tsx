@@ -8,7 +8,8 @@ import { FreeKassaBanner } from "@/components/FreeKassaBanner";
 import { SiteShell } from "@/components/SiteShell";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { requestAuthModal } from "@/lib/authModal";
-import { formatRub } from "@/lib/money";
+import { SiteMoney } from "@/components/SiteMoney";
+import { formatSiteAmount } from "@/lib/money";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 
 function splitItemName(item: string): { weapon: string; skin: string } {
@@ -276,7 +277,7 @@ export default function ProfilePage() {
     if (typeof r.data?.depositPercent === "number") {
       setPromoMsg(`+${r.data.depositPercent}% к депозиту`);
     } else {
-      setPromoMsg(`Начислено ${formatRub(r.data?.granted ?? 0)} ₽`);
+      setPromoMsg(`Начислено ${formatSiteAmount(r.data?.granted ?? 0)}`);
     }
     setPromoCode("");
     await load();
@@ -548,7 +549,7 @@ export default function ProfilePage() {
                             <span className="font-mono font-bold text-white">{me.inventory.length}</span>
                           </span>
                           <span className="font-mono text-lg font-black text-white">
-                            {formatRub(me.balance)} ₽
+                            <SiteMoney value={me.balance} iconClassName="h-[1.05em] w-[1.05em]" />
                           </span>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
@@ -611,7 +612,7 @@ export default function ProfilePage() {
                             🪙
                           </span>
                           <span className="font-mono text-xl font-black text-cb-flame">
-                            {formatRub(st.soldTotalRub)} ₽
+                            <SiteMoney value={st.soldTotalRub} iconClassName="h-[1.05em] w-[1.05em]" />
                           </span>
                           <span className="text-sm text-zinc-400">
                             {st.itemsSold}{" "}
@@ -638,7 +639,7 @@ export default function ProfilePage() {
                               ) : null}
                               <p className="mt-2 text-xs text-zinc-500">Редкость: {bestDrop.rarity}</p>
                               <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#dc2626] px-3 py-1 font-mono text-sm font-black tabular-nums text-white shadow-md">
-                                {formatRub(bestDrop.sellPrice)}&nbsp;₽
+                                <SiteMoney value={bestDrop.sellPrice} iconClassName="h-[1.05em] w-[1.05em]" />
                               </p>
                             </div>
                             <div
@@ -745,7 +746,12 @@ export default function ProfilePage() {
                             ? "Все предметы на выводе"
                             : sellAllBusy
                               ? "Продаём…"
-                              : `Продать всё за ${formatRub(inventorySellTotal)} ₽`}
+                              : (
+                                <>
+                                  Продать всё за{" "}
+                                  <SiteMoney value={inventorySellTotal} iconClassName="h-[1.1em] w-[1.1em]" />
+                                </>
+                              )}
                       </button>
                     </div>
 
@@ -778,7 +784,7 @@ export default function ProfilePage() {
                                       : undefined
                                   }
                                 >
-                                  {formatRub(showRub)} ₽
+                                  <SiteMoney value={showRub} iconClassName="h-[1em] w-[1em]" />
                                 </p>
                                 {locked ? (
                                   <div className="mt-0.5 space-y-1 pl-7 text-right">
