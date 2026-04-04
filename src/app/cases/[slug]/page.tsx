@@ -277,6 +277,8 @@ export default function CaseOpenPage() {
   const pendingBatchRef = useRef<BatchOpenResult | null>(null);
   /** Останнє відкриття ×2+ було «Быстро» — «Ще раз» повторює той самий режим */
   const batchLastOpenWasFastRef = useRef(false);
+  /** Фіксований склад луту на час батч-анімації — щоб ре-рендери / оновлення кейса не перезапускали рулетку. */
+  const [batchItemsFreeze, setBatchItemsFreeze] = useState<RouletteItem[] | null>(null);
 
   const loadCase = useCallback(async () => {
     const r = await apiFetch<CaseInfo>(`/api/cases/${slug}`);
@@ -307,6 +309,7 @@ export default function CaseOpenPage() {
     setBatchDrop(null);
     pendingBatchRef.current = null;
     setBatchFastOpening(false);
+    setBatchItemsFreeze(null);
   }, [slug]);
 
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -371,9 +374,15 @@ export default function CaseOpenPage() {
       setLandIndex(null);
 
       if (animated) {
+        if (c?.items?.length) {
+          setBatchItemsFreeze(c.items.map((it) => ({ ...it })));
+        } else {
+          setBatchItemsFreeze(null);
+        }
         setBatchFastOpening(false);
         setBatchSpinSession((s) => s + 1);
       } else {
+        setBatchItemsFreeze(null);
         setBatchFastOpening(true);
       }
 
@@ -391,6 +400,7 @@ export default function CaseOpenPage() {
         setFastHeroMode(false);
         setBatchLandIndices(null);
         setBatchFastOpening(false);
+        setBatchItemsFreeze(null);
         if (r.status === 401) return;
         if (r.status === 429) return;
         alert(r.error || "Ошибка");
@@ -420,7 +430,7 @@ export default function CaseOpenPage() {
         window.dispatchEvent(new CustomEvent("cd-balance-updated"));
       }
     },
-    [slug, openMultiplier],
+    [slug, openMultiplier, c],
   );
 
   const openBatch = useCallback(() => runOpenBatch(true), [runOpenBatch]);
@@ -570,6 +580,7 @@ export default function CaseOpenPage() {
       pendingBatchRef.current = null;
     }
     setBatchLandIndices(null);
+    setBatchItemsFreeze(null);
   }
 
   const lootSortedForGrid = useMemo(
@@ -617,16 +628,15 @@ export default function CaseOpenPage() {
     setSellAllBusy(true);
     const rows = batchDrop.results;
     try {
-      for (const row of rows) {
-        const r = await apiFetch<{ newBalance: number }>("/api/inventory/sell", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId: row.item.itemId }),
-        });
-        if (!r.ok) {
-          alert(r.error || "Не удалось продать");
-          return;
-        }
+      const itemIds = rows.map((row) => row.item.itemId);
+      const r = await apiFetch<{ newBalance: number }>("/api/inventory/sell-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds }),
+      });
+      if (!r.ok) {
+        alert(r.error || "Не удалось продать");
+        return;
       }
       setBatchDrop(null);
       setFastHeroMode(false);
@@ -664,7 +674,7 @@ export default function CaseOpenPage() {
                 (showBatchRouletteSection ? (
                   <CaseBatchVerticalRoulette
                     key={batchSpinSession}
-                    items={c.items}
+                    items={batchItemsFreeze ?? c.items}
                     columnCount={openMultiplier}
                     spinWaiting={batchApiWaiting}
                     landIndices={batchLandIndices}

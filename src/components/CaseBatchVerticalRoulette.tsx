@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 import {
@@ -12,9 +11,9 @@ import {
   normRarity,
   rarityBar,
   rarityCardFill,
+  BATCH_VERTICAL_SPIN_ROUNDS,
   ROULETTE_SPIN_DURATION_MS,
   ROULETTE_SPIN_EASE,
-  ROULETTE_SPIN_ROUNDS,
   rouletteStripHeadSlots,
   rouletteStripSlotCount,
   type RouletteItem,
@@ -74,20 +73,23 @@ const BatchVerticalCard = memo(function BatchVerticalCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[9.5rem] w-full max-w-[118px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-transform duration-200 ease-out sm:max-w-[132px] ${fill} ${
-        isWinner ? "z-10 scale-[1.05] shadow-[0_0_26px_rgba(255,49,49,0.35)] will-change-transform" : "z-0 scale-100"
+      className={`relative h-[9.5rem] w-full max-w-[118px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:max-w-[132px] ${fill} ${
+        isWinner
+          ? "z-10 scale-[1.05] shadow-[0_0_26px_rgba(255,49,49,0.35)] will-change-transform transition-transform duration-200 ease-out"
+          : "z-0 scale-100"
       }`}
     >
       <div className="relative z-[1] flex h-full min-h-0 flex-col p-1.5 pb-1">
         <div className="relative mx-auto min-h-0 flex-1 basis-0 w-full">
           {item.image ? (
-            <Image
+            // Навмисно <img>: у батчі ×5 сотні Next/Image сильно гальмують рулетку.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={preferHighResSteamEconomyImage(item.image) ?? item.image}
               alt=""
-              fill
-              className={`object-contain drop-shadow-md ${SKIN_IMG_QUALITY_CLASS}`}
-              quality={100}
-              unoptimized
+              draggable={false}
+              decoding="async"
+              className={`absolute inset-0 m-auto max-h-full max-w-full object-contain drop-shadow-md ${SKIN_IMG_QUALITY_CLASS}`}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-2xl text-zinc-300/80">?</div>
@@ -140,7 +142,7 @@ function VerticalColumn({
 
   const strip = useMemo(() => {
     if (!items.length || !perm.length) return [];
-    const len = rouletteStripSlotCount(items.length);
+    const len = rouletteStripSlotCount(items.length, BATCH_VERTICAL_SPIN_ROUNDS);
     return Array.from({ length: len }, (_, i) => {
       const catIdx = perm[i % n] ?? 0;
       return { ...items[catIdx], key: i };
@@ -148,7 +150,7 @@ function VerticalColumn({
   }, [items, n, perm]);
 
   useLayoutEffect(() => {
-    if (!viewportRef.current || !items.length) return;
+    if (!viewportRef.current || n <= 0) return;
 
     let cancelled = false;
     let rafOuter: number | null = null;
@@ -179,7 +181,7 @@ function VerticalColumn({
     const idleIdx = n * 3 + head;
     const idleTy = vh / 2 - HALF_CARD_Y - TRACK_PAD - idleIdx * CARD_STEP_Y;
     const ringLand = inv[landOnIndex] ?? 0;
-    const finalSlot = ROULETTE_SPIN_ROUNDS * n + ringLand + head;
+    const finalSlot = BATCH_VERTICAL_SPIN_ROUNDS * n + ringLand + head;
     const endTy = vh / 2 - HALF_CARD_Y - TRACK_PAD - finalSlot * CARD_STEP_Y;
 
     setTransitionMs(0);
@@ -200,9 +202,10 @@ function VerticalColumn({
       if (rafOuter != null) cancelAnimationFrame(rafOuter);
       if (rafInner != null) cancelAnimationFrame(rafInner);
     };
-  }, [items, n, inv, spinWaiting, landOnIndex, landEpoch]);
+  }, [n, inv, spinWaiting, landOnIndex, landEpoch]);
 
   function onTransitionEnd(e: React.TransitionEvent) {
+    if (e.target !== e.currentTarget) return;
     if (e.propertyName !== "transform" || transitionMs === 0) return;
     if (landOnIndex == null || landedRef.current) return;
     landedRef.current = true;
@@ -214,13 +217,13 @@ function VerticalColumn({
     landOnIndex != null && inv.length > 0 ? (inv[landOnIndex] ?? 0) : 0;
   const winnerStripIndex =
     landOnIndex != null && n > 0 && inv.length > 0
-      ? ROULETTE_SPIN_ROUNDS * n + ringLandWin + headSlots
+      ? BATCH_VERTICAL_SPIN_ROUNDS * n + ringLandWin + headSlots
       : -1;
 
   return (
     <div
       ref={viewportRef}
-      className="relative h-[16rem] min-w-0 flex-1 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] sm:h-[18rem] sm:max-w-[148px] sm:flex-none"
+      className="relative h-[16rem] min-w-0 flex-1 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] [contain:layout_paint] sm:h-[18rem] sm:max-w-[148px] sm:flex-none"
     >
       <div
         className="flex flex-col items-center gap-3 px-1.5 pb-28 pt-2.5 will-change-transform [backface-visibility:hidden]"

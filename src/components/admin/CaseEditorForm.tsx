@@ -341,18 +341,12 @@ export function CaseEditorForm({ mode, initial }: Props) {
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
             Скин поверх кейса (URL, лучше PNG с прозрачностью)
           </span>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            <input
-              value={skinImage}
-              onChange={(e) => setSkinImage(e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
-              placeholder="https://… оружие / предмет поверх коробки"
-            />
-            <ImgbbUploadButton
-              nameHint={`case-${slug.trim() || "new"}-skin`}
-              onUploaded={(url) => setSkinImage(url)}
-            />
-          </div>
+          <input
+            value={skinImage}
+            onChange={(e) => setSkinImage(e.target.value)}
+            className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+            placeholder="https://… оружие / предмет поверх коробки"
+          />
         </label>
         <div className="space-y-2 lg:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -534,15 +528,11 @@ export function CaseEditorForm({ mode, initial }: Props) {
               </label>
               <label className="block space-y-1">
                 <span className="text-[10px] uppercase text-zinc-500">IMG URL</span>
-                <div className="flex flex-wrap items-stretch gap-1">
+                <div className="flex gap-1">
                   <input
                     value={row.image}
                     onChange={(e) => updateItem(i, { image: e.target.value })}
                     className="min-w-0 flex-1 rounded border border-cb-stroke bg-black/30 px-2 py-1.5 text-sm text-white"
-                  />
-                  <ImgbbUploadButton
-                    nameHint={`loot-${slug.trim() || "new"}-${i}`}
-                    onUploaded={(url) => updateItem(i, { image: url })}
                   />
                   <button
                     type="button"

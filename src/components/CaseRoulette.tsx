@@ -24,9 +24,14 @@ const TRACK_PAD = 16;
 
 /**
  * Менше повних циклів = повільніший «потік» карток при тій самій тривалості + менше DOM при x5.
- * Має збігатися з CaseBatchVerticalRoulette (імпорт ROULETTE_SPIN_ROUNDS).
+ * Вертикальний батч використовує менше оборотів (`BATCH_VERTICAL_SPIN_ROUNDS`), щоб не лагало ×5.
  */
 export const ROULETTE_SPIN_ROUNDS = 11;
+
+/**
+ * Менше оборотів у вертикальному батчі (×2–×5 колонок) — менше DOM/Image, та сама тривалість анімації.
+ */
+export const BATCH_VERTICAL_SPIN_ROUNDS = 5;
 
 /**
  * Раніше стрічка була ~48×N карток (сотні DOM + Image) — сильно лагало.
@@ -41,9 +46,12 @@ export function rouletteStripHeadSlots(n: number): number {
   return Math.ceil(ROULETTE_STRIP_HEAD_MIN / n) * n;
 }
 
-export function rouletteStripSlotCount(n: number): number {
+export function rouletteStripSlotCount(
+  n: number,
+  spinRounds: number = ROULETTE_SPIN_ROUNDS,
+): number {
   if (n <= 0) return 0;
-  return rouletteStripHeadSlots(n) + n * (ROULETTE_SPIN_ROUNDS + 1) + ROULETTE_STRIP_TAIL_SLOTS;
+  return rouletteStripHeadSlots(n) + n * (spinRounds + 1) + ROULETTE_STRIP_TAIL_SLOTS;
 }
 
 /** Тривалість основної прокрутки (очікування API — окремо, без анімації стрічки). */
@@ -104,9 +112,9 @@ const RouletteCard = memo(function RouletteCard({
   const fill = rarityCardFill[rk] || rarityCardFill.common;
   return (
     <div
-      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-200 ease-out ${fill} ${
+      className={`relative h-[11.25rem] w-32 shrink-0 overflow-hidden rounded-xl border border-cb-stroke/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${fill} ${
         isWinner
-          ? "z-10 scale-[1.12] shadow-[0_0_28px_rgba(255,49,49,0.35)] will-change-transform sm:scale-[1.14]"
+          ? "z-10 scale-[1.12] shadow-[0_0_28px_rgba(255,49,49,0.35)] will-change-transform transition-transform duration-200 ease-out sm:scale-[1.14]"
           : "z-0 scale-100"
       }`}
     >
@@ -271,6 +279,7 @@ export function CaseRoulette({
   }, [items, spinWaiting, landOnIndex, landEpoch]);
 
   function onTransitionEnd(e: React.TransitionEvent) {
+    if (e.target !== e.currentTarget) return;
     if (e.propertyName !== "transform" || transitionMs === 0) return;
     if (landOnIndex == null || landedRef.current) return;
     landedRef.current = true;
