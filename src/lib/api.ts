@@ -79,4 +79,40 @@ export function steamLoginUrl() {
   return `${base}/api/auth/steam`;
 }
 
+/** Якщо порожньо — капча на клієнті вимкнена (локально без Turnstile). */
+export function turnstileSiteKey(): string {
+  return (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "").trim();
+}
+
+/**
+ * Обміняти токен Turnstile на httpOnly-cookie `cd_login_gate` (потрібно перед GET /api/auth/steam,
+ * якщо на бекенді задано TURNSTILE_SECRET_KEY).
+ */
+export async function postLoginCaptcha(turnstileToken: string): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${base}/api/auth/login-captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: turnstileToken }),
+      credentials: "include",
+    });
+    const text = await res.text();
+    let data: { error?: string } = {};
+    try {
+      data = text ? (JSON.parse(text) as { error?: string }) : {};
+    } catch {
+      data = {};
+    }
+    if (!res.ok) {
+      return { ok: false, error: data.error || `Ошибка ${res.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Нет связи с API" };
+  }
+}
+
 export { base as apiBase };

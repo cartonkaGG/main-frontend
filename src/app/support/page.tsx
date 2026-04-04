@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { SiteShell } from "@/components/SiteShell";
-import { apiFetch, getToken, steamLoginUrl } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
+import { requestSteamLoginRedirect } from "@/lib/steamLoginRedirect";
 
 type TicketSummary = {
   id: string;
@@ -62,7 +63,7 @@ export default function SupportPage() {
     setErr(null);
     setOk(null);
     if (!getToken()) {
-      window.location.href = steamLoginUrl();
+      requestSteamLoginRedirect();
       return;
     }
     setBusy(true);

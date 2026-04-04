@@ -13,6 +13,7 @@ import {
 import { apiFetch, type ApiFieldErrors } from "@/lib/api";
 import { formatSiteAmount } from "@/lib/money";
 import { MarketCsgoHashInput } from "@/components/admin/MarketCsgoHashInput";
+import { ImgbbUploadButton } from "@/components/admin/ImgbbUploadButton";
 
 function formatZodDetails(d?: ApiFieldErrors): string | null {
   if (!d) return null;
@@ -57,6 +58,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
   );
   const [category, setCategory] = useState(initial?.category || "popular");
   const [featured, setFeatured] = useState(Boolean(initial?.featured));
+  const [hidden, setHidden] = useState(Boolean(initial?.hidden));
   const [accent, setAccent] = useState(initial?.accent || "amber");
   const [items, setItems] = useState<LootRow[]>(
     initial?.items?.length ? initial.items : [emptyLoot()]
@@ -128,6 +130,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
       heroSkinImageScale: hSkin,
       category: category.trim() || "popular",
       featured,
+      hidden,
       accent: ACCENT_KEYS.includes(accent) ? accent : "amber",
       items: rawItems.filter((it) => it.name.length > 0),
     };
@@ -143,6 +146,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
     heroSkinImageScale,
     category,
     featured,
+    hidden,
     accent,
     items,
   ]);
@@ -193,6 +197,7 @@ export function CaseEditorForm({ mode, initial }: Props) {
         heroSkinImageScale: saveBody.heroSkinImageScale,
         category: saveBody.category,
         featured: saveBody.featured,
+        hidden: saveBody.hidden,
         accent: saveBody.accent,
         items: saveBody.items,
       }),
@@ -305,23 +310,49 @@ export function CaseEditorForm({ mode, initial }: Props) {
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
             Коробка кейса — статичное изображение (URL)
           </span>
-          <input
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-            className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
-            placeholder="https://… фон открытого кейса"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            <input
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+              placeholder="https://… фон открытого кейса"
+            />
+            <ImgbbUploadButton
+              nameHint={`case-${slug.trim() || "new"}-box`}
+              onUploaded={(url) => setImage(url)}
+            />
+          </div>
+          <p className="text-[10px] leading-snug text-zinc-600">
+            Прямая ссылка или загрузка на{" "}
+            <a
+              href="https://uk.imgbb.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-400/95 hover:underline"
+            >
+              ImgBB
+            </a>{" "}
+            через кнопку (на сервере нужен{" "}
+            <span className="font-mono text-zinc-500">IMGBB_API_KEY</span>
+            ). Перед загрузкой картинка ужимается до ~1280 px — так быстрее грузится на сайте.
+          </p>
         </label>
         <label className="block space-y-1 lg:col-span-2">
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
             Скин поверх кейса (URL, лучше PNG с прозрачностью)
           </span>
-          <input
-            value={skinImage}
-            onChange={(e) => setSkinImage(e.target.value)}
-            className="w-full rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
-            placeholder="https://… оружие / предмет поверх коробки"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            <input
+              value={skinImage}
+              onChange={(e) => setSkinImage(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-cb-stroke bg-black/40 px-3 py-2 text-white"
+              placeholder="https://… оружие / предмет поверх коробки"
+            />
+            <ImgbbUploadButton
+              nameHint={`case-${slug.trim() || "new"}-skin`}
+              onUploaded={(url) => setSkinImage(url)}
+            />
+          </div>
         </label>
         <div className="space-y-2 lg:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -400,6 +431,17 @@ export function CaseEditorForm({ mode, initial }: Props) {
             className="h-4 w-4 rounded border-cb-stroke"
           />
           <span className="text-sm text-zinc-300">Рекомендуемый (топ)</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={hidden}
+            onChange={(e) => setHidden(e.target.checked)}
+            className="h-4 w-4 rounded border-cb-stroke"
+          />
+          <span className="text-sm text-zinc-300">
+            Скрыть с сайта (нет в каталоге, открыть нельзя)
+          </span>
         </label>
         <label className="block space-y-1">
           <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
@@ -492,11 +534,15 @@ export function CaseEditorForm({ mode, initial }: Props) {
               </label>
               <label className="block space-y-1">
                 <span className="text-[10px] uppercase text-zinc-500">IMG URL</span>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap items-stretch gap-1">
                   <input
                     value={row.image}
                     onChange={(e) => updateItem(i, { image: e.target.value })}
                     className="min-w-0 flex-1 rounded border border-cb-stroke bg-black/30 px-2 py-1.5 text-sm text-white"
+                  />
+                  <ImgbbUploadButton
+                    nameHint={`loot-${slug.trim() || "new"}-${i}`}
+                    onUploaded={(url) => updateItem(i, { image: url })}
                   />
                   <button
                     type="button"

@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { steamLoginUrl } from "@/lib/api";
+import { postLoginCaptcha, steamLoginUrl, turnstileSiteKey } from "@/lib/api";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 type CdAuthModalEvent = CustomEvent<{ nextUrl?: string | null }>;
+
+const tsSiteKey = turnstileSiteKey();
 
 export function AuthModalHost() {
   const [open, setOpen] = useState(false);
   const [nextUrl, setNextUrl] = useState<string>("/");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedAge, setAcceptedAge] = useState(false);
+  const [tsToken, setTsToken] = useState<string | null>(null);
+  const [steamBusy, setSteamBusy] = useState(false);
+  const [capErr, setCapErr] = useState<string | null>(null);
 
   const loginHref = useMemo(() => steamLoginUrl(), []);
 
@@ -27,6 +33,9 @@ export function AuthModalHost() {
       setNextUrl(url);
       setAcceptedTerms(false);
       setAcceptedAge(false);
+      setTsToken(null);
+      setCapErr(null);
+      setSteamBusy(false);
       setOpen(true);
     }
 
@@ -54,11 +63,27 @@ export function AuthModalHost() {
     setOpen(false);
     setAcceptedTerms(false);
     setAcceptedAge(false);
+    setTsToken(null);
+    setCapErr(null);
+    setSteamBusy(false);
     window.localStorage.removeItem("cd_next");
   }
 
-  function handleSteamLogin() {
-    // Redirect via Steam. After callback we will redirect back using cd_next.
+  async function handleSteamLogin() {
+    setCapErr(null);
+    if (tsSiteKey && !tsToken) {
+      setCapErr("Пройдите проверку ниже.");
+      return;
+    }
+    setSteamBusy(true);
+    if (tsSiteKey) {
+      const r = await postLoginCaptcha(tsToken || "");
+      if (!r.ok) {
+        setCapErr(r.error || "Ошибка проверки");
+        setSteamBusy(false);
+        return;
+      }
+    }
     window.localStorage.setItem("cd_next", nextUrl);
     window.location.href = loginHref;
   }
@@ -105,14 +130,24 @@ export function AuthModalHost() {
               Присоединяйтесь, чтобы открыть кейс и получить предметы. Нужен вход через Steam.
             </p>
 
+            {tsSiteKey ? (
+              <div className="mt-4 flex min-h-[72px] items-center justify-center">
+                <TurnstileWidget siteKey={tsSiteKey} onToken={setTsToken} />
+              </div>
+            ) : null}
+            {capErr ? <p className="mt-2 text-center text-xs text-red-300">{capErr}</p> : null}
+
             <div className="mt-6">
               <button
                 type="button"
-                onClick={handleSteamLogin}
-                disabled={!(acceptedTerms && acceptedAge)}
+                onClick={() => void handleSteamLogin()}
+                disabled={
+                  !(acceptedTerms && acceptedAge) || steamBusy || (Boolean(tsSiteKey) && !tsToken)
+                }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-700 to-cb-flame px-6 py-3 text-sm font-bold text-white shadow-lg shadow-red-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                <span aria-hidden>STEAM</span> ВОЙТИ ЧЕРЕЗ STEAM
+                <span aria-hidden>STEAM</span>{" "}
+                {steamBusy ? "Проверяем…" : "ВОЙТИ ЧЕРЕЗ STEAM"}
               </button>
             </div>
 

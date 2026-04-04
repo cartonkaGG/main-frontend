@@ -54,6 +54,8 @@ export type AdminCaseFull = {
   heroSkinImageScale?: number;
   category: string;
   featured: boolean;
+  /** Не показывать в каталоге и блокировать открытие на сайте */
+  hidden?: boolean;
   accent: string;
   items: LootRow[];
 };

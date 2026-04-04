@@ -54,6 +54,7 @@ export default function AdminCasesListPage() {
               <th className="px-4 py-3">Цена</th>
               <th className="px-4 py-3">Предметов</th>
               <th className="px-4 py-3">Акцент</th>
+              <th className="px-4 py-3">На сайте</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -86,6 +87,17 @@ export default function AdminCasesListPage() {
                 </td>
                 <td className="px-4 py-2 text-zinc-400">{c.items?.length ?? 0}</td>
                 <td className="px-4 py-2 text-zinc-500">{c.accent}</td>
+                <td className="px-4 py-2">
+                  {c.hidden ? (
+                    <span className="rounded-md border border-zinc-600 bg-zinc-900/80 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+                      скрыт
+                    </span>
+                  ) : (
+                    <span className="rounded-md border border-emerald-900/60 bg-emerald-950/40 px-2 py-0.5 text-[11px] font-medium text-emerald-400/90">
+                      виден
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-right">
                   <Link
                     href={`/admin/cases/${c.slug}`}

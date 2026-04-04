@@ -40,6 +40,13 @@ type InvItem = {
   caseSlug?: string;
 };
 
+/** Взнос і підсумки — як на сервері: спочатку market.csgo, інакше збережена sellPrice */
+function effectiveInvPriceRub(it: InvItem): number {
+  const m = it.marketPriceRub;
+  if (m != null && m > 0) return Math.floor(m);
+  return Math.floor(Number(it.sellPrice) || 0);
+}
+
 type CatalogItem = {
   id: string;
   name: string;
@@ -717,7 +724,7 @@ export default function UpgradePage() {
     let s = 0;
     selected.forEach((id) => {
       const it = inventory.find((x) => x.itemId === id);
-      if (it) s += Number(it.sellPrice) || 0;
+      if (it) s += effectiveInvPriceRub(it);
     });
     return s;
   }, [selected, inventory]);
@@ -1183,8 +1190,7 @@ export default function UpgradePage() {
                         {selectedItems.map((it) => {
                           const rk = resolveUpgradeRarityKey(it.rarity || "common");
                           const locked = Boolean(it.withdrawalPending);
-                          const chipRub =
-                            it.marketPriceRub != null && it.marketPriceRub > 0 ? it.marketPriceRub : it.sellPrice;
+                          const chipRub = effectiveInvPriceRub(it);
                           return (
                             <button
                               key={it.itemId}
@@ -1486,10 +1492,7 @@ export default function UpgradePage() {
                       const on = selected.has(it.itemId);
                       const locked = Boolean(it.withdrawalPending);
                       const rk = resolveUpgradeRarityKey(it.rarity || "common");
-                      const chipRub =
-                        it.marketPriceRub != null && it.marketPriceRub > 0
-                          ? it.marketPriceRub
-                          : it.sellPrice;
+                      const chipRub = effectiveInvPriceRub(it);
                       return (
                         <button
                           key={it.itemId}
@@ -1566,10 +1569,7 @@ export default function UpgradePage() {
                       {inventoryPageSlice.map((it) => {
                     const on = selected.has(it.itemId);
                     const locked = Boolean(it.withdrawalPending);
-                    const chipRub =
-                      it.marketPriceRub != null && it.marketPriceRub > 0
-                        ? it.marketPriceRub
-                        : it.sellPrice;
+                    const chipRub = effectiveInvPriceRub(it);
                     return (
                       <button
                         key={it.itemId}

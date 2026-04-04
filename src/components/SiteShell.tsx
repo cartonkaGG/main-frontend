@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { apiFetch, clearToken, getToken, steamLoginUrl } from "@/lib/api";
+import { apiFetch, clearToken, getToken } from "@/lib/api";
+import { requestSteamLoginRedirect } from "@/lib/steamLoginRedirect";
 import { SiteMoney } from "@/components/SiteMoney";
 import { useLiveDrops } from "@/hooks/useLiveDrops";
 import { LiveDropsRail } from "@/components/LiveDropsRail";
@@ -358,12 +359,13 @@ export function SiteShell({ children }: Props) {
             </div>
             </div>
           ) : (
-            <a
-              href={steamLoginUrl()}
+            <button
+              type="button"
+              onClick={() => requestSteamLoginRedirect()}
               className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-gradient-to-r from-red-700 to-cb-flame px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-900/30 hover:brightness-110 active:brightness-95"
             >
               Steam
-            </a>
+            </button>
           )}
         </div>
       </header>

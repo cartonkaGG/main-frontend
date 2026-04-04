@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { apiBase, apiFetch, clearToken, getToken, steamLoginUrl } from "@/lib/api";
+import { apiBase, apiFetch, clearToken, getToken } from "@/lib/api";
+import { requestSteamLoginRedirect } from "@/lib/steamLoginRedirect";
 
 type PublicBeta = {
   closedBeta: boolean;
@@ -234,12 +235,13 @@ export function ClosedBetaBoundary({ children }: { children: React.ReactNode }) 
           </p>
 
           {!hasBrowserToken ? (
-            <a
-              href={steamLoginUrl()}
+            <button
+              type="button"
+              onClick={() => requestSteamLoginRedirect()}
               className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-red-900 to-cb-flame py-3 text-sm font-bold uppercase tracking-wider text-white shadow-[0_8px_28px_rgba(255,49,49,0.25)] transition hover:brightness-110"
             >
               Войти через Steam
-            </a>
+            </button>
           ) : isPending ? (
             <div className="space-y-4 text-left">
               <p className="text-sm text-zinc-300">

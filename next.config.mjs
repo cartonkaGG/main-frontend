@@ -25,6 +25,9 @@ const remoteImageHosts = [
   "store.steampowered.com",
   "cdn.gamecontent.io",
   "cdn.freekassa.net",
+  /** ImgBB (прямі посилання після завантаження в адмінці) */
+  "i.ibb.co",
+  "ibb.co",
 ];
 
 /** Проксі /api/* на бекенд — тоді з браузера можна бити в той самий origin (localhost:3000/api/...). Див. frontend/.env.example */

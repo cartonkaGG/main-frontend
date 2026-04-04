@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthModalHost } from "@/components/AuthModalHost";
+import { SteamLoginRedirectHost } from "@/components/SteamLoginRedirectHost";
 import { ClosedBetaBoundary } from "@/components/ClosedBetaBoundary";
 import { StormAtmosphere } from "@/components/StormAtmosphere";
 
@@ -82,6 +83,7 @@ export default function RootLayout({
           <ClosedBetaBoundary>{children}</ClosedBetaBoundary>
         </div>
         <AuthModalHost />
+        <SteamLoginRedirectHost />
       </body>
     </html>
   );
