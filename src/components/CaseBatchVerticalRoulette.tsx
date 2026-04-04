@@ -187,7 +187,6 @@ function VerticalColumn({
   accentWinner: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
   const [ty, setTy] = useState(0);
 
   const n = items.length;
@@ -297,10 +296,7 @@ function VerticalColumn({
       className="relative h-[16rem] w-[124px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] sm:h-[18rem] sm:w-[148px] sm:shrink-0"
     >
       <div
-        ref={(el) => {
-          stripRef.current = el;
-          registerStripEl?.(el);
-        }}
+        ref={registerStripEl}
         className="will-change-transform [backface-visibility:hidden] [transform:translateZ(0)]"
         style={
           batchStripImperative
