@@ -12,6 +12,8 @@ import { CryptoTopUpModal } from "@/components/CryptoTopUpModal";
 import { RoundedZapIcon } from "@/components/icons/RoundedZapIcon";
 import { SITE_MONEY_CTA_COMPACT_CLASS, SITE_MONEY_CTA_TINY_CLASS } from "@/lib/siteMoneyStyles";
 import { prefetchUpgradePageData } from "@/lib/upgradePrefetch";
+import { NavbarNotifications } from "@/components/NavbarNotifications";
+import { AdminWithdrawalAlerts } from "@/components/AdminWithdrawalAlerts";
 
 /** Дані шапки з легкого GET /api/me/session (без важкого /api/me). */
 type Me = {
@@ -238,6 +240,8 @@ export function SiteShell({ children }: Props) {
             </div>
           ) : me ? (
             <div className="flex items-center gap-2">
+              <NavbarNotifications />
+              {me.isAdmin ? <AdminWithdrawalAlerts /> : null}
               <button
                 type="button"
                 onClick={() => setCryptoTopUpOpen(true)}

@@ -194,6 +194,8 @@ export default function AdminWithdrawalsPage() {
   const [inspectData, setInspectData] = useState<AdminUserInspectResponse | null>(null);
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspectErr, setInspectErr] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Withdrawal | null>(null);
+  const [cancelNote, setCancelNote] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -210,6 +212,9 @@ export default function AdminWithdrawalsPage() {
     const list = Array.isArray(r.data?.withdrawals) ? r.data!.withdrawals : [];
     setWithdrawals(list);
     setMarketCsgoConfigured(Boolean(r.data?.marketCsgoConfigured));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cd-admin-withdrawals-poll"));
+    }
     setRowInputs((prev) => {
       const next = { ...prev };
       for (const w of list) {
@@ -310,24 +315,41 @@ export default function AdminWithdrawalsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [inspect, closeInspect]);
 
-  async function cancel(w: Withdrawal) {
-    const msg =
-      w.status === "failed"
-        ? "Отменить заявку и вернуть предмет игроку в инвентарь?"
-        : "Отменить заявку?";
-    if (!window.confirm(msg)) return;
+  useEffect(() => {
+    if (!cancelTarget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && busyId === null) setCancelTarget(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cancelTarget, busyId]);
+
+  function openCancelModal(w: Withdrawal) {
+    setCancelNote("");
+    setCancelTarget(w);
+  }
+
+  async function submitCancel() {
+    const w = cancelTarget;
+    if (!w) return;
     setBusyId(w.id);
     setErr(null);
     const r = await apiFetch(`/api/admin/withdrawals/${w.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancel" }),
+      body: JSON.stringify({
+        action: "cancel",
+        note: cancelNote.trim().slice(0, 500),
+        reason: cancelNote.trim().slice(0, 500),
+      }),
     });
     setBusyId(null);
     if (!r.ok) {
       setErr(r.error || "Ошибка");
       return;
     }
+    setCancelTarget(null);
+    setCancelNote("");
     await load();
   }
 
@@ -429,6 +451,11 @@ export default function AdminWithdrawalsPage() {
                     {w.lastError ? (
                       <div className="mt-1 max-w-[200px] text-[10px] font-normal text-red-400/90">{w.lastError}</div>
                     ) : null}
+                    {w.status === "cancelled" && w.adminNote ? (
+                      <div className="mt-1 max-w-[220px] text-[10px] font-normal text-zinc-400">
+                        Причина: {w.adminNote}
+                      </div>
+                    ) : null}
                     {withdrawalAuditLines(w).map((line) => (
                       <div key={line.key} className={`mt-1 max-w-[240px] text-[10px] font-normal ${line.className}`}>
                         {line.text}
@@ -508,7 +535,7 @@ export default function AdminWithdrawalsPage() {
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => void cancel(w)}
+                          onClick={() => openCancelModal(w)}
                           className="rounded-lg border border-zinc-600 bg-black/40 px-2 py-1.5 text-[11px] font-semibold text-zinc-400 transition hover:border-red-500/40 hover:text-red-300 disabled:opacity-40"
                         >
                           Отменить
@@ -757,6 +784,62 @@ export default function AdminWithdrawalsPage() {
               ) : (
                 <p className="text-sm text-zinc-500">Нет данных</p>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {cancelTarget ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Закрыть"
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            onClick={() => {
+              if (!busyId) setCancelTarget(null);
+            }}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-cb-stroke bg-[#0a0e14] p-5 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">Отмена заявки на вывод</h3>
+            <p className="mt-2 text-sm text-zinc-400">
+              {cancelTarget.status === "failed"
+                ? "Предмет будет возвращён игроку в инвентарь."
+                : "Заявка будет отменена. Текст ниже увидит игрок в уведомлении (раздел «Причина»)."}
+            </p>
+            <p className="mt-2 text-xs text-zinc-500">
+              Предмет:{" "}
+              <span className="text-zinc-300">{cancelTarget.itemSnapshot?.name || "—"}</span>
+            </p>
+            <label className="mt-4 block">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Причина отмены (необязательно, до 500 символов)
+              </span>
+              <textarea
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Например: неверная trade-ссылка, лот не найден по цене…"
+                className="mt-1.5 w-full resize-none rounded-xl border border-cb-stroke/80 bg-black/50 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600"
+              />
+            </label>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => setCancelTarget(null)}
+                className="rounded-xl border border-cb-stroke px-4 py-2 text-sm font-semibold text-zinc-400 transition hover:bg-white/5 disabled:opacity-45"
+              >
+                Назад
+              </button>
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void submitCancel()}
+                className="rounded-xl border border-red-600/50 bg-red-950/40 px-4 py-2 text-sm font-bold text-red-200 transition hover:bg-red-950/55 disabled:opacity-45"
+              >
+                {busyId ? "…" : "Отменить заявку"}
+              </button>
             </div>
           </div>
         </div>

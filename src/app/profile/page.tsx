@@ -184,6 +184,9 @@ export default function ProfilePage() {
     setErr(null);
     setMe(rMe.data!);
     setMyWithdrawals(Array.isArray(rWd.data?.withdrawals) ? rWd.data!.withdrawals : []);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cd-withdrawals-mine-changed"));
+    }
   }, []);
 
   useEffect(() => {
