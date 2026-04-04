@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 import {
   getRouletteSoundMuted,
@@ -28,6 +29,13 @@ const VIRTUAL_BUFFER = 5;
 
 /** Однакова тривалість прокрутки всіх колонок батча (мс), ціль 5–6 с. */
 const BATCH_VERTICAL_SPIN_DURATION_MS = 6000;
+
+/**
+ * Додаткові повні цикли по n слотів до призової позиції.
+ * Без цього від idle до land різниця лише ringLand (0…n−1) → при однаковій тривалості дуже різна швидкість у px/с.
+ * +k·n зберігає той самий скін у центрі (стрічка періодична з періодом n).
+ */
+const BATCH_VERTICAL_SYNC_FULL_LOOPS = 2;
 
 /** Ease-out близько до cubic-bezier(0.22, 0.82, 0.12, 1) — ручний rAF замість CSS transition. */
 function batchSpinEase(u: number) {
@@ -101,7 +109,8 @@ function computeBatchColumnEnds(
   const cat = clampCatalogLandIndex(landOnIndex, n);
   if (cat == null) return { idleTy, endTy: idleTy };
   const ringLand = inv[cat] ?? 0;
-  const finalSlot = BATCH_VERTICAL_SPIN_ROUNDS * n + ringLand + head;
+  const finalSlot =
+    BATCH_VERTICAL_SPIN_ROUNDS * n + ringLand + head + BATCH_VERTICAL_SYNC_FULL_LOOPS * n;
   const endTy = batchStripYForSlot(vh, finalSlot);
   return { idleTy, endTy };
 }
@@ -162,14 +171,19 @@ function VerticalColumn({
   spinWaiting,
   landOnIndex,
   drivenStripY,
+  batchStripImperative,
+  registerStripEl,
   accentWinner,
 }: {
   items: RouletteItem[];
   columnIndex: number;
   spinWaiting: boolean;
   landOnIndex: number | null;
-  /** Позиція стрічки з батька (один rAF на всі колонки); якщо undefined — локальний ty. */
+  /** Позиція стрічки з батька після спіну (фінал); під час спіну transform задає батько по ref. */
   drivenStripY?: number;
+  /** true: не ставити transform у React — батько оновлює DOM у спільному rAF. */
+  batchStripImperative: boolean;
+  registerStripEl?: (el: HTMLDivElement | null) => void;
   accentWinner: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -190,7 +204,7 @@ function VerticalColumn({
 
   const stripLen =
     n > 0 && perm.length > 0
-      ? rouletteStripSlotCount(n, BATCH_VERTICAL_SPIN_ROUNDS)
+      ? rouletteStripSlotCount(n, BATCH_VERTICAL_SPIN_ROUNDS + BATCH_VERTICAL_SYNC_FULL_LOOPS)
       : 0;
 
   const head = n > 0 ? rouletteStripHeadSlots(n) : 0;
@@ -205,7 +219,8 @@ function VerticalColumn({
       ] as const;
     }
     const ringLand = inv[landCatalogIdx] ?? 0;
-    const finalSlot = BATCH_VERTICAL_SPIN_ROUNDS * n + ringLand + head;
+    const finalSlot =
+      BATCH_VERTICAL_SPIN_ROUNDS * n + ringLand + head + BATCH_VERTICAL_SYNC_FULL_LOOPS * n;
     const lo = Math.max(0, Math.min(idleIdx, finalSlot) - VIRTUAL_BUFFER);
     const hi = Math.min(stripLen - 1, Math.max(idleIdx, finalSlot) + VIRTUAL_BUFFER);
     return [lo, hi] as const;
@@ -273,7 +288,7 @@ function VerticalColumn({
     landCatalogIdx != null && inv.length > 0 ? (inv[landCatalogIdx] ?? 0) : 0;
   const winnerStripIndex =
     landCatalogIdx != null && n > 0 && inv.length > 0
-      ? BATCH_VERTICAL_SPIN_ROUNDS * n + ringLandWin + head
+      ? BATCH_VERTICAL_SPIN_ROUNDS * n + ringLandWin + head + BATCH_VERTICAL_SYNC_FULL_LOOPS * n
       : -1;
 
   return (
@@ -282,12 +297,19 @@ function VerticalColumn({
       className="relative h-[16rem] w-[124px] shrink-0 overflow-hidden rounded-xl border border-cb-stroke/50 bg-[#05080f]/95 shadow-[inset_0_0_32px_rgba(0,0,0,0.45)] sm:h-[18rem] sm:w-[148px] sm:shrink-0"
     >
       <div
-        ref={stripRef}
-        className="will-change-transform [backface-visibility:hidden] [transform:translateZ(0)]"
-        style={{
-          transform: `translate3d(0,${stripTranslateY}px,0)`,
-          transition: "none",
+        ref={(el) => {
+          stripRef.current = el;
+          registerStripEl?.(el);
         }}
+        className="will-change-transform [backface-visibility:hidden] [transform:translateZ(0)]"
+        style={
+          batchStripImperative
+            ? { transition: "none" }
+            : {
+                transform: `translate3d(0,${stripTranslateY}px,0)`,
+                transition: "none",
+              }
+        }
       >
         <div className="relative mx-auto w-full px-1.5" style={{ minHeight: stripMinHeight }}>
           {slotHi >= slotLo &&
@@ -353,6 +375,8 @@ export function CaseBatchVerticalRoulette({
 }: Props) {
   const [soundMuted, setSoundMuted] = useState(false);
   const batchVhMeasureRef = useRef<HTMLDivElement>(null);
+  const stripElsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [batchStripImperative, setBatchStripImperative] = useState(false);
   const [unifiedStripYs, setUnifiedStripYs] = useState<number[] | null>(null);
   const landCompleteFiredRef = useRef(false);
   const onLandCompleteRef = useRef(onLandComplete);
@@ -392,6 +416,7 @@ export function CaseBatchVerticalRoulette({
       indicesKey === ""
     ) {
       clearSpin();
+      setBatchStripImperative(false);
       setUnifiedStripYs(null);
       landCompleteFiredRef.current = false;
       return () => {
@@ -414,15 +439,24 @@ export function CaseBatchVerticalRoulette({
     }
 
     landCompleteFiredRef.current = false;
-    setUnifiedStripYs(from);
 
     const D = BATCH_VERTICAL_SPIN_DURATION_MS;
+
+    function applyStripTransforms(ys: number[]) {
+      for (let i = 0; i < safeCount; i++) {
+        const el = stripElsRef.current[i];
+        if (el) el.style.transform = `translate3d(0,${ys[i]}px,0)`;
+      }
+    }
 
     function fireComplete() {
       if (landCompleteFiredRef.current || cancelled) return;
       landCompleteFiredRef.current = true;
       clearSpin();
-      setUnifiedStripYs([...to]);
+      flushSync(() => {
+        setBatchStripImperative(false);
+        setUnifiedStripYs([...to]);
+      });
       queueMicrotask(() => {
         onLandCompleteRef.current();
       });
@@ -435,8 +469,15 @@ export function CaseBatchVerticalRoulette({
       return () => {
         cancelled = true;
         clearSpin();
+        setBatchStripImperative(false);
       };
     }
+
+    flushSync(() => {
+      setUnifiedStripYs(null);
+      setBatchStripImperative(true);
+    });
+    applyStripTransforms(from);
 
     const t0 = performance.now();
     timeoutId = setTimeout(() => {
@@ -448,7 +489,7 @@ export function CaseBatchVerticalRoulette({
       if (cancelled || landCompleteFiredRef.current) return;
       const u = Math.min(1, (now - t0) / D);
       const ys = from.map((f, i) => f + (to[i]! - f) * batchSpinEase(u));
-      setUnifiedStripYs(ys);
+      applyStripTransforms(ys);
       if (u < 1) {
         rafId = requestAnimationFrame(tick);
       } else {
@@ -461,6 +502,7 @@ export function CaseBatchVerticalRoulette({
     return () => {
       cancelled = true;
       clearSpin();
+      setBatchStripImperative(false);
     };
   }, [spinWaiting, landEpoch, landLen, safeCount, indicesKey, items, landIndices]);
 
@@ -514,6 +556,10 @@ export function CaseBatchVerticalRoulette({
             spinWaiting={spinWaiting}
             landOnIndex={indices?.[i] ?? null}
             drivenStripY={unifiedStripYs?.[i]}
+            batchStripImperative={batchStripImperative}
+            registerStripEl={(el) => {
+              stripElsRef.current[i] = el;
+            }}
             accentWinner={accentWinner}
           />
         ))}
