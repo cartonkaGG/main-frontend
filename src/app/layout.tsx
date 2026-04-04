@@ -13,7 +13,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "StormBattle",
-  description: "Кейсы CS2",
+  description:
+    "StormBattle CS2 (CS:GO) — сражайтесь с настоящими противниками, открывайте кейсы и забирайте самые ценные скины.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
