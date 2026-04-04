@@ -5,6 +5,9 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",

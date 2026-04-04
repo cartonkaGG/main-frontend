@@ -9,7 +9,9 @@ import { SiteShell } from "@/components/SiteShell";
 import { apiFetch, clearToken, getToken } from "@/lib/api";
 import { requestAuthModal } from "@/lib/authModal";
 import { SiteMoney } from "@/components/SiteMoney";
+import { SitePriceBadge } from "@/components/SitePriceBadge";
 import { formatSiteAmount } from "@/lib/money";
+import { SITE_MONEY_CTA_CLASS } from "@/lib/siteMoneyStyles";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
 
 function splitItemName(item: string): { weapon: string; skin: string } {
@@ -549,7 +551,7 @@ export default function ProfilePage() {
                             <span className="font-mono font-bold text-white">{me.inventory.length}</span>
                           </span>
                           <span className="font-mono text-lg font-black text-white">
-                            <SiteMoney value={me.balance} iconClassName="h-[1.05em] w-[1.05em]" />
+                            <SiteMoney value={me.balance} iconClassName="h-[1.05em] w-[1.05em] text-cb-flame" />
                           </span>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
@@ -563,7 +565,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={openTopUp}
-                            className="inline-flex items-center gap-2 rounded-xl border-2 border-cb-flame/70 bg-cb-flame/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-cb-flame transition hover:bg-cb-flame/20"
+                            className={`${SITE_MONEY_CTA_CLASS} gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider`}
                           >
                             + Пополнить
                           </button>
@@ -612,7 +614,7 @@ export default function ProfilePage() {
                             🪙
                           </span>
                           <span className="font-mono text-xl font-black text-cb-flame">
-                            <SiteMoney value={st.soldTotalRub} iconClassName="h-[1.05em] w-[1.05em]" />
+                            <SiteMoney value={st.soldTotalRub} iconClassName="h-[1.05em] w-[1.05em] text-cb-flame" />
                           </span>
                           <span className="text-sm text-zinc-400">
                             {st.itemsSold}{" "}
@@ -638,9 +640,9 @@ export default function ProfilePage() {
                                 </p>
                               ) : null}
                               <p className="mt-2 text-xs text-zinc-500">Редкость: {bestDrop.rarity}</p>
-                              <p className="mt-3 inline-flex rounded-full bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#dc2626] px-3 py-1 font-mono text-sm font-black tabular-nums text-white shadow-md">
-                                <SiteMoney value={bestDrop.sellPrice} iconClassName="h-[1.05em] w-[1.05em]" />
-                              </p>
+                              <div className="mt-3">
+                                <SitePriceBadge value={bestDrop.sellPrice} size="md" />
+                              </div>
                             </div>
                             <div
                               className={`relative mx-auto h-36 w-36 shrink-0 overflow-hidden rounded-xl ring-1 sm:h-40 sm:w-40 ${
@@ -699,7 +701,7 @@ export default function ProfilePage() {
                       type="button"
                       disabled={promoBusy}
                       onClick={applyPromo}
-                      className="min-h-[3rem] shrink-0 rounded-xl bg-gradient-to-r from-orange-500 via-orange-600 to-rose-600 px-8 text-sm font-black uppercase tracking-wider text-white shadow-lg shadow-orange-900/40 transition hover:brightness-110 disabled:opacity-50"
+                      className={`${SITE_MONEY_CTA_CLASS} min-h-[3rem] shrink-0 px-8 text-sm font-black uppercase tracking-wider disabled:opacity-50`}
                     >
                       Применить
                     </button>
@@ -735,7 +737,7 @@ export default function ProfilePage() {
                         onClick={() => {
                           void sellAll();
                         }}
-                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cb-stroke/90 bg-black/45 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-zinc-200 shadow-md transition hover:border-cb-flame/50 hover:bg-red-950/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+                        className={`${SITE_MONEY_CTA_CLASS} min-h-[2.75rem] shrink-0 px-4 py-2.5 text-xs font-bold uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-0 sm:text-sm`}
                       >
                         <span aria-hidden className="text-base leading-none">
                           🪙
@@ -749,7 +751,7 @@ export default function ProfilePage() {
                               : (
                                 <>
                                   Продать всё за{" "}
-                                  <SiteMoney value={inventorySellTotal} iconClassName="h-[1.1em] w-[1.1em]" />
+                                  <SiteMoney value={inventorySellTotal} iconClassName="h-[1.1em] w-[1.1em] text-white" />
                                 </>
                               )}
                       </button>
@@ -784,7 +786,7 @@ export default function ProfilePage() {
                                       : undefined
                                   }
                                 >
-                                  <SiteMoney value={showRub} iconClassName="h-[1em] w-[1em]" />
+                                  <SiteMoney value={showRub} iconClassName="h-[1em] w-[1em] text-cb-flame" />
                                 </p>
                                 {locked ? (
                                   <div className="mt-0.5 space-y-1 pl-7 text-right">
@@ -944,7 +946,7 @@ export default function ProfilePage() {
                 <div className="mt-10 flex justify-center sm:justify-start">
                   <Link
                     href="/"
-                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-600 to-rose-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-orange-900/35 transition hover:brightness-110"
+                    className={`${SITE_MONEY_CTA_CLASS} px-8 py-3`}
                   >
                     На главную
                   </Link>

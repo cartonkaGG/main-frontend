@@ -13,7 +13,8 @@ import {
 } from "react";
 import { normRarity, rarityCardFill } from "@/components/CaseRoulette";
 import { SiteShell } from "@/components/SiteShell";
-import { StormCoinSymbol } from "@/components/StormCoinSymbol";
+import { RoundedZapIcon } from "@/components/icons/RoundedZapIcon";
+import { UpgradeInviteChevrons } from "@/components/icons/UpgradeInviteChevrons";
 import { apiFetch, getToken } from "@/lib/api";
 import { formatRubSpaced, formatSiteAmountSpaced, SITE_CURRENCY_CODE } from "@/lib/money";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
@@ -1139,13 +1140,13 @@ export default function UpgradePage() {
                         <span>Предметы</span>
                         <span className="inline-flex items-center gap-0.5 font-mono text-zinc-400">
                           <span className="tabular-nums">{formatRubSpaced(inputSum)}</span>
-                          <StormCoinSymbol className="h-2.5 w-2.5 shrink-0 opacity-85" />
+                          <RoundedZapIcon className="h-2.5 w-2.5 shrink-0 text-zinc-500" />
                         </span>
                         <span aria-hidden>·</span>
                         <span>баланс +</span>
                         <span className="inline-flex items-center gap-0.5 font-mono text-zinc-400">
                           <span className="tabular-nums">{formatRubSpaced(balanceBoostRub)}</span>
-                          <StormCoinSymbol className="h-2.5 w-2.5 shrink-0 opacity-85" />
+                          <RoundedZapIcon className="h-2.5 w-2.5 shrink-0 text-zinc-500" />
                         </span>
                       </p>
                     ) : null}
@@ -1154,7 +1155,7 @@ export default function UpgradePage() {
                       aria-label={formatSiteAmountSpaced(stakeTotal)}
                     >
                       <span className="tabular-nums">{formatRubSpaced(stakeTotal)}</span>
-                      <StormCoinSymbol className="h-[1.15em] w-[1.15em] shrink-0 drop-shadow-[0_0_10px_rgba(52,211,153,0.35)] sm:h-[1.12em] sm:w-[1.12em]" />
+                      <RoundedZapIcon className="h-[1.15em] w-[1.15em] shrink-0 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.35)] sm:h-[1.12em] sm:w-[1.12em]" />
                     </p>
                     {selected.size > 0 ? (
                       <p className="mt-0.5 text-[10px] text-zinc-600">{selected.size} из 6 предметов</p>
@@ -1165,20 +1166,10 @@ export default function UpgradePage() {
                   <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
                     {selectedItems.length === 0 ? (
                       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-1 sm:gap-4 sm:px-3">
-                        <div
-                          className="-space-y-1.5 flex flex-col items-center text-cb-flame drop-shadow-[0_0_22px_rgba(255,49,49,0.45)]"
-                          aria-hidden
-                        >
-                          <span className="ug-stake-invite-chevron ug-stake-invite-chevron--1 text-[28px] leading-none sm:text-[34px]">
-                            ▼
-                          </span>
-                          <span className="ug-stake-invite-chevron ug-stake-invite-chevron--2 text-[24px] leading-none sm:text-[30px]">
-                            ▼
-                          </span>
-                          <span className="ug-stake-invite-chevron ug-stake-invite-chevron--3 text-[20px] leading-none sm:text-[26px]">
-                            ▼
-                          </span>
-                        </div>
+                        <UpgradeInviteChevrons
+                          variant="stake"
+                          className="text-cb-flame drop-shadow-[0_0_14px_rgba(255,49,49,0.55)] sm:drop-shadow-[0_0_22px_rgba(255,49,49,0.65)]"
+                        />
                         <p className="max-w-[260px] text-center text-[11px] leading-snug text-zinc-500 sm:text-xs">
                           Предметы появятся здесь
                         </p>
@@ -1228,7 +1219,7 @@ export default function UpgradePage() {
                                   aria-label={formatSiteAmountSpaced(chipRub)}
                                 >
                                   <span className={`min-w-0 ${UPGRADE_STAKE_MINI_PRICE_NUM}`}>{formatRubSpaced(chipRub)}</span>
-                                  <StormCoinSymbol className="h-[8px] w-[8px] shrink-0 opacity-90" />
+                                  <RoundedZapIcon className="h-[8px] w-[8px] shrink-0 text-emerald-100" />
                                 </div>
 
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1 pb-1 pt-4">
@@ -1378,25 +1369,15 @@ export default function UpgradePage() {
                       })()}
                       <div className={`relative z-[2] ${UPGRADE_TARGET_CARD_PRICE_ROW}`}>
                         <span className={`min-w-0 ${UPGRADE_TARGET_CARD_PRICE_NUM} text-left`}>{formatRubSpaced(target.price)}</span>
-                        <StormCoinSymbol className="h-[1em] w-[1em] shrink-0 sm:h-[1.12em] sm:w-[1.12em]" />
+                        <RoundedZapIcon className="h-[1em] w-[1em] shrink-0 text-amber-400 sm:h-[1.12em] sm:w-[1.12em]" />
                       </div>
                     </>
                   ) : (
                     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-1 sm:gap-4 sm:px-3">
-                      <div
-                        className="-space-y-1.5 flex flex-col items-center text-cb-flame drop-shadow-[0_0_22px_rgba(255,49,49,0.45)]"
-                        aria-hidden
-                      >
-                        <span className="ug-target-invite-chevron ug-target-invite-chevron--1 text-[28px] leading-none sm:text-[34px]">
-                          ▲
-                        </span>
-                        <span className="ug-target-invite-chevron ug-target-invite-chevron--2 text-[24px] leading-none sm:text-[30px]">
-                          ▲
-                        </span>
-                        <span className="ug-target-invite-chevron ug-target-invite-chevron--3 text-[20px] leading-none sm:text-[26px]">
-                          ▲
-                        </span>
-                      </div>
+                      <UpgradeInviteChevrons
+                        variant="target"
+                        className="text-cb-flame drop-shadow-[0_0_14px_rgba(255,49,49,0.55)] sm:drop-shadow-[0_0_22px_rgba(255,49,49,0.65)]"
+                      />
                       <p className="max-w-[260px] text-center text-[11px] leading-snug text-zinc-500 sm:text-xs">
                         Цель появится здесь
                       </p>
@@ -1547,7 +1528,7 @@ export default function UpgradePage() {
                               aria-label={formatSiteAmountSpaced(chipRub)}
                             >
                               <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM}`}>{formatRubSpaced(chipRub)}</span>
-                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
+                              <RoundedZapIcon className="h-[10px] w-[10px] shrink-0 text-emerald-100 sm:h-[11px] sm:w-[11px]" />
                             </div>
 
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 px-1.5 pb-1.5 pt-3">
@@ -1625,7 +1606,7 @@ export default function UpgradePage() {
                             <p className="min-w-0 flex-1 truncate text-[11px] text-zinc-100">{it.name}</p>
                             <span className={`shrink-0 ${UPGRADE_SKIN_PRICE_TAG_ROW}`}>
                               <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM_ROW}`}>{formatRubSpaced(chipRub)}</span>
-                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
+                              <RoundedZapIcon className="h-[10px] w-[10px] shrink-0 text-emerald-100 sm:h-[11px] sm:w-[11px]" />
                             </span>
                           </div>
                           {locked ? (
@@ -1802,7 +1783,7 @@ export default function UpgradePage() {
                               aria-label={formatSiteAmountSpaced(t.price)}
                             >
                               <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM}`}>{formatRubSpaced(t.price)}</span>
-                              <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
+                              <RoundedZapIcon className="h-[10px] w-[10px] shrink-0 text-emerald-100 sm:h-[11px] sm:w-[11px]" />
                             </div>
 
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col gap-0.5 px-1.5 pb-1.5 pt-3">
@@ -1883,7 +1864,7 @@ export default function UpgradePage() {
                               </p>
                               <span className={`shrink-0 ${UPGRADE_SKIN_PRICE_TAG_ROW}`}>
                                 <span className={`min-w-0 ${UPGRADE_SKIN_PRICE_NUM_ROW}`}>{formatRubSpaced(t.price)}</span>
-                                <StormCoinSymbol className="h-[10px] w-[10px] shrink-0 sm:h-[11px] sm:w-[11px]" />
+                                <RoundedZapIcon className="h-[10px] w-[10px] shrink-0 text-emerald-100 sm:h-[11px] sm:w-[11px]" />
                               </span>
                             </div>
                           </div>

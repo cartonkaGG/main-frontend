@@ -3,8 +3,10 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
+import { SiteMoney } from "@/components/SiteMoney";
 import { SITE_CURRENCY_CODE } from "@/lib/money";
 import { requestAuthModal } from "@/lib/authModal";
+import { SITE_MONEY_CTA_COMPACT_CLASS } from "@/lib/siteMoneyStyles";
 
 type CryptoOpt = { payCurrency: string; title: string; sub: string };
 
@@ -223,7 +225,8 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
             </h2>
             <p className="mb-5 text-[11px] text-zinc-500">
               Оплата через NOWPayments. Минимум <span className="font-mono text-zinc-400">{minUsd} USD</span>.
-              Зачисление в {SITE_CURRENCY_CODE} (storm-coin) по курсу, который задаёт админ (Админка → Интерфейс / site-ui).
+              Зачисление на баланс ({SITE_CURRENCY_CODE}) по курсу, который задаёт админ (Админка → Интерфейс / site-ui). В
+              интерфейсе суммы отображаются с иконкой молнии.
             </p>
 
             {err ? (
@@ -302,7 +305,7 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                       type="button"
                       disabled={busy}
                       onClick={() => void submit()}
-                      className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-red-800 to-cb-flame px-5 text-[11px] font-black uppercase tracking-widest text-white shadow-[0_8px_28px_rgba(255,49,49,0.3)] transition hover:brightness-110 disabled:opacity-45 sm:min-w-[140px] sm:px-6"
+                      className={`${SITE_MONEY_CTA_COMPACT_CLASS} h-11 shrink-0 sm:min-w-[140px]`}
                     >
                       {busy ? "…" : "Пополнить"}
                     </button>
@@ -310,22 +313,34 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                   <div className="space-y-1 text-[10px] text-zinc-600">
                     {preview && !previewLoading ? (
                       <>
-                        <p>
+                        <p className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
                           База:{" "}
-                          <span className="font-mono text-zinc-400">{preview.creditRubBase}</span> {SITE_CURRENCY_CODE} ·
-                          курс{" "}
+                          <SiteMoney
+                            value={preview.creditRubBase}
+                            className="text-zinc-400"
+                            iconClassName="h-[0.85em] w-[0.85em] text-zinc-400"
+                          />{" "}
+                          · курс{" "}
                           <span className="font-mono text-zinc-500">{preview.rubPerUsd.toFixed(2)}</span>{" "}
                           {SITE_CURRENCY_CODE}/USD (курс сайта)
                         </p>
                         {preview.bonusPercent > 0 ? (
-                          <p className="text-emerald-200/90">
-                            Бонус по промокоду +{preview.bonusPercent}%:{" "}
-                            <span className="font-mono">+{preview.bonusRub}</span> {SITE_CURRENCY_CODE}
+                          <p className="inline-flex flex-wrap items-center gap-x-1 text-emerald-200/90">
+                            Бонус по промокоду +{preview.bonusPercent}%: +{" "}
+                            <SiteMoney
+                              value={preview.bonusRub}
+                              className="text-emerald-200/90"
+                              iconClassName="h-[0.85em] w-[0.85em] text-emerald-300"
+                            />
                           </p>
                         ) : null}
-                        <p className="font-medium text-zinc-300">
+                        <p className="inline-flex flex-wrap items-center gap-x-1 font-medium text-zinc-300">
                           Итого на баланс:{" "}
-                          <span className="font-mono text-white">{preview.totalRub}</span> {SITE_CURRENCY_CODE}
+                          <SiteMoney
+                            value={preview.totalRub}
+                            className="text-white"
+                            iconClassName="h-[0.85em] w-[0.85em] text-white"
+                          />
                         </p>
                         {preview.promoError ? (
                           <p className="text-amber-200/90">{preview.promoError}</p>
@@ -334,9 +349,14 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
                     ) : previewLoading ? (
                       <p className="text-zinc-500">Расчёт суммы…</p>
                     ) : guestPreviewRub != null && rubPerServer != null ? (
-                      <p>
-                        ≈ <span className="font-mono text-zinc-400">{guestPreviewRub}</span> {SITE_CURRENCY_CODE} без
-                        бонуса (войдите, чтобы увидеть итог с промокодом). Курс{" "}
+                      <p className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                        ≈{" "}
+                        <SiteMoney
+                          value={guestPreviewRub}
+                          className="text-zinc-400"
+                          iconClassName="h-[0.85em] w-[0.85em] text-zinc-400"
+                        />{" "}
+                        без бонуса (войдите, чтобы увидеть итог с промокодом). Курс{" "}
                         <span className="font-mono text-zinc-500">{rubPerServer.toFixed(2)}</span>{" "}
                         {SITE_CURRENCY_CODE}/USD (курс сайта)
                       </p>

@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { apiFetch, clearToken, getToken, steamLoginUrl } from "@/lib/api";
-import { formatRub } from "@/lib/money";
+import { SiteMoney } from "@/components/SiteMoney";
 import { useLiveDrops } from "@/hooks/useLiveDrops";
 import { LiveDropsRail } from "@/components/LiveDropsRail";
 import { CryptoTopUpModal } from "@/components/CryptoTopUpModal";
-import { StormCoinSymbol } from "@/components/StormCoinSymbol";
+import { RoundedZapIcon } from "@/components/icons/RoundedZapIcon";
+import { SITE_MONEY_CTA_COMPACT_CLASS, SITE_MONEY_CTA_TINY_CLASS } from "@/lib/siteMoneyStyles";
 import { prefetchUpgradePageData } from "@/lib/upgradePrefetch";
 
 /** Дані шапки з легкого GET /api/me/session (без важкого /api/me). */
@@ -33,68 +34,19 @@ type Props = {
   children: React.ReactNode;
 };
 
-/** Иконка апгрейда: три равномерных шеврона вверх, по центру viewBox (cb-flame по центру). */
-function UpgradeNavIcon({
-  className,
-  filterId = "cb-upgrade-chevron-glow",
-}: {
-  className?: string;
-  filterId?: string;
-}) {
-  const muted = "#5c4a52";
-  const flame = "#ff3131";
-  const stroke = 2;
-  const cx = 16;
-  const half = 10;
-  const xl = cx - half;
-  const xr = cx + half;
-  /** Вершины и основания без перекрытий, шаг 7 по Y */
-  const peaks = [5, 12, 19] as const;
-  const bases = [10, 17, 24] as const;
+function NavChevronUp({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      width={32}
-      height={28}
-      viewBox="0 0 32 28"
+      viewBox="0 0 24 24"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
-      style={{ display: "block" }}
     >
-      <defs>
-        <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="0.9" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <path
-        d={`M${xl} ${bases[2]} L${cx} ${peaks[2]} L${xr} ${bases[2]}`}
-        stroke={muted}
-        strokeOpacity={0.95}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d={`M${xl} ${bases[1]} L${cx} ${peaks[1]} L${xr} ${bases[1]}`}
-        stroke={flame}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter={`url(#${filterId})`}
-      />
-      <path
-        d={`M${xl} ${bases[0]} L${cx} ${peaks[0]} L${xr} ${bases[0]}`}
-        stroke={muted}
-        strokeOpacity={0.95}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="m18 15-6-6-6 6" />
     </svg>
   );
 }
@@ -208,11 +160,9 @@ export function SiteShell({ children }: Props) {
     window.location.reload();
   }
 
-  const balanceStr = me ? formatRub(me.balance) : null;
   const pathname = usePathname();
   const router = useRouter();
   const upgradeActive = pathname.startsWith("/upgrade");
-  const upgradeFilterId = useId().replace(/:/g, "");
   const warmUpgradeNav = useCallback(() => {
     router.prefetch("/upgrade");
     prefetchUpgradePageData();
@@ -220,67 +170,61 @@ export function SiteShell({ children }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col lg:h-full lg:min-h-0 lg:overflow-hidden">
-      <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 border-b border-cb-stroke/80 bg-cb-void/90 px-4 py-3 backdrop-blur-xl sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image
-            src="/logo.svg"
-            alt=""
-            width={36}
-            height={36}
-            className="h-9 w-9 shrink-0 drop-shadow-[0_0_12px_rgba(255,49,49,0.45)]"
-            priority
-          />
-          <span className="bg-gradient-to-r from-white via-cb-flame to-red-300 bg-clip-text text-xl font-black tracking-tight text-transparent">
-            StormBattle
-          </span>
-        </Link>
-        <nav className="flex flex-1 items-center justify-center sm:flex-none sm:justify-start">
+      <header className="sticky top-0 z-50 flex min-h-20 flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] bg-[#050505]/80 px-4 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-6 sm:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-8">
+          <Link
+            href="/"
+            className="group flex shrink-0 cursor-pointer items-center gap-2.5 outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-red-500/50 opacity-0 blur-md transition-opacity duration-500 group-hover:opacity-100" />
+              <RoundedZapIcon className="relative z-10 h-8 w-8 -skew-x-12 text-red-500 transition-transform duration-500 group-hover:scale-110 sm:h-9 sm:w-9" />
+            </div>
+            <span className="text-2xl font-black tracking-tight text-white sm:text-[1.65rem]">
+              Storm
+              <span className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">Battle</span>
+            </span>
+          </Link>
           <Link
             href="/upgrade"
             prefetch
             onPointerEnter={warmUpgradeNav}
             onFocus={warmUpgradeNav}
-            className={`group relative flex items-center gap-2.5 overflow-hidden rounded-2xl border px-2.5 py-2 outline-none transition sm:gap-3 sm:px-3.5 sm:py-2.5 ${
+            className={`group relative flex shrink-0 items-center gap-2 overflow-hidden rounded-lg border bg-gradient-to-b px-4 py-2 outline-none transition-all focus-visible:ring-2 focus-visible:ring-red-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] ${
               upgradeActive
-                ? "border-cb-flame/50 bg-gradient-to-r from-red-950/55 via-cb-panel/90 to-zinc-950/95 shadow-[0_0_22px_rgba(255,49,49,0.2),inset_0_1px_0_rgba(255,49,49,0.12)]"
-                : "border-cb-stroke/80 bg-gradient-to-br from-zinc-950/90 via-cb-panel/45 to-black/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:border-cb-flame/40 hover:shadow-[0_0_18px_rgba(255,49,49,0.14)]"
-            } focus-visible:ring-2 focus-visible:ring-cb-flame/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cb-void`}
+                ? "border-red-500/50 from-red-500/20 to-transparent"
+                : "border-red-500/20 from-red-500/10 to-transparent hover:border-red-500/50"
+            }`}
           >
-            <span
-              className={`relative flex h-9 w-9 shrink-0 items-center justify-center leading-none rounded-xl border transition sm:h-10 sm:w-10 ${
-                upgradeActive
-                  ? "border-cb-flame/45 bg-gradient-to-b from-cb-flame/25 to-red-950/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                  : "border-cb-stroke/70 bg-black/50 group-hover:border-cb-flame/35 group-hover:bg-cb-flame/10"
-              }`}
-            >
-              <UpgradeNavIcon
-                filterId={`cb-upg-${upgradeFilterId}`}
-                className="h-7 w-8 shrink-0 transition group-hover:drop-shadow-[0_0_10px_rgba(255,49,49,0.5)] sm:h-8 sm:w-[2.286rem]"
-              />
-            </span>
-            <span className="min-w-0 pr-0.5 text-sm font-black uppercase tracking-wide text-cb-flame drop-shadow-[0_0_10px_rgba(255,49,49,0.55)] sm:text-[15px]">
+            <div className="absolute inset-0 translate-y-full bg-red-500/10 transition-transform duration-300 ease-out group-hover:translate-y-0" />
+            <div className="relative z-10 flex flex-col -space-y-2 text-red-500 transition-transform duration-300 group-hover:-translate-y-0.5">
+              <NavChevronUp className="h-4 w-4 shrink-0" />
+              <NavChevronUp className="h-4 w-4 shrink-0" />
+            </div>
+            <span className="relative z-10 text-sm font-bold uppercase tracking-wider text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.3)]">
               Апгрейд
             </span>
           </Link>
-        </nav>
+        </div>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
-          {me && balanceStr != null && (
+          {me && (
             <div className="hidden items-stretch lg:flex">
               <div className="flex items-center gap-1.5 rounded-3xl border border-cb-stroke/70 bg-gradient-to-br from-zinc-950/95 via-cb-panel/35 to-black/90 p-1 pl-3 shadow-[inset_0_1px_0_rgba(255,49,49,0.1),0_4px_24px_rgba(0,0,0,0.35)]">
                 <div className="flex min-w-0 flex-col justify-center gap-0.5 py-1.5 pr-1">
                   <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-500">
                     Баланс
                   </span>
-                  <span className="inline-flex items-center gap-0.5 font-mono text-lg font-black tabular-nums leading-none tracking-tight text-white">
-                    <span className="tabular-nums">{balanceStr}</span>
-                    <StormCoinSymbol className="h-[1.28rem] w-[1.28rem] shrink-0 max-h-none max-w-none" />
-                  </span>
+                  <SiteMoney
+                    value={me.balance}
+                    className="text-lg font-black leading-none tracking-tight text-white"
+                    iconClassName="h-[1.2rem] w-[1.2rem] shrink-0 text-cb-flame drop-shadow-[0_0_10px_rgba(255,49,49,0.45)]"
+                  />
                 </div>
                 <div className="h-8 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-cb-stroke/80 to-transparent" aria-hidden />
                 <button
                   type="button"
                   onClick={() => setCryptoTopUpOpen(true)}
-                  className="shrink-0 rounded-xl bg-gradient-to-r from-red-900/90 via-cb-flame/90 to-red-600/95 px-4 py-2 text-[11px] font-black uppercase tracking-wide text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:ring-2 focus-visible:ring-cb-flame/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                  className={`${SITE_MONEY_CTA_COMPACT_CLASS} shrink-0 focus-visible:outline focus-visible:ring-2 focus-visible:ring-cb-flame/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950`}
                 >
                   Пополнить
                 </button>
@@ -297,7 +241,7 @@ export function SiteShell({ children }: Props) {
               <button
                 type="button"
                 onClick={() => setCryptoTopUpOpen(true)}
-                className="rounded-2xl border border-cb-flame/40 bg-gradient-to-r from-red-950/70 to-cb-flame/20 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cb-flame transition hover:border-cb-flame/60 hover:brightness-110 lg:hidden"
+                className={`${SITE_MONEY_CTA_TINY_CLASS} rounded-2xl lg:hidden`}
               >
                 Пополнить
               </button>
@@ -339,9 +283,12 @@ export function SiteShell({ children }: Props) {
                 >
                   <div className="border-b border-cb-stroke px-4 py-3">
                     <p className="truncate text-sm font-semibold text-white">{me.displayName}</p>
-                    <p className="mt-1 inline-flex max-w-full min-w-0 items-center gap-0.5 font-mono text-xs text-cb-flame">
-                      <span className="min-w-0 truncate tabular-nums">{formatRub(me.balance)}</span>
-                      <StormCoinSymbol className="h-4 w-4 shrink-0 max-h-none max-w-none opacity-90" />
+                    <p className="mt-1 max-w-full min-w-0 truncate text-xs text-cb-flame">
+                      <SiteMoney
+                        value={me.balance}
+                        className="font-mono"
+                        iconClassName="h-4 w-4 shrink-0 text-cb-flame"
+                      />
                     </p>
                   </div>
                   <Link

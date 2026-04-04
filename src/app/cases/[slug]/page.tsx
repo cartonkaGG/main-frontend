@@ -14,8 +14,10 @@ import {
 } from "@/components/CaseRoulette";
 import { CaseNeonRingFrame } from "@/components/CaseNeonRingFrame";
 import { SiteMoney } from "@/components/SiteMoney";
+import { SitePriceBadge } from "@/components/SitePriceBadge";
 import { SiteShell } from "@/components/SiteShell";
 import { apiFetch, getToken } from "@/lib/api";
+import { SITE_MONEY_CTA_CLASS, SITE_MONEY_CTA_WIDE_CLASS } from "@/lib/siteMoneyStyles";
 import { requestAuthModal } from "@/lib/authModal";
 import { sortLootGoldToGray } from "@/lib/caseLootSort";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
@@ -172,11 +174,7 @@ function BatchResultMiniCard({
       className={`flex h-full min-h-[13.5rem] w-[140px] shrink-0 flex-col overflow-hidden rounded-xl border border-cb-stroke/70 shadow-lg sm:min-h-[15rem] sm:w-[160px] ${fill}`}
     >
       <div className="relative shrink-0 px-2 pt-2 text-right">
-        <SiteMoney
-          value={row.item.sellPrice}
-          className="justify-end font-mono text-[10px] font-bold text-emerald-400"
-          iconClassName="h-2.5 w-2.5 shrink-0"
-        />
+        <SitePriceBadge value={row.item.sellPrice} size="sm" className="ml-auto" />
       </div>
       <div className="relative mx-auto h-[100px] w-full shrink-0 px-2 sm:h-[118px]">
         {row.item.image ? (
@@ -807,8 +805,8 @@ export default function CaseOpenPage() {
                             }}
                             className={
                               shortOnFunds
-                                ? "inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-cb-stroke/90 bg-gradient-to-r from-red-900/80 to-cb-flame/90 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition hover:brightness-110 sm:flex-none sm:px-8"
-                                : "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500/85 bg-transparent px-4 py-3 text-sm font-bold text-amber-400 transition hover:border-amber-400 hover:bg-amber-500/10 sm:px-5"
+                                ? `${SITE_MONEY_CTA_CLASS} flex-1 sm:flex-none sm:px-8`
+                                : "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-red-500/35 bg-zinc-950/90 px-4 py-3 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-red-400/50 hover:bg-zinc-900/95 sm:px-5"
                             }
                           >
                             {shortOnFunds ? (
@@ -859,13 +857,13 @@ export default function CaseOpenPage() {
                                 window.dispatchEvent(new CustomEvent("cd-balance-updated"));
                               }
                             }}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-bold text-zinc-900 shadow-md transition hover:brightness-110 sm:px-5"
+                            className={`${SITE_MONEY_CTA_CLASS} sm:px-5`}
                           >
                             <span className="text-base leading-none opacity-90" aria-hidden>
                               🛒
                             </span>
                             Продать за{" "}
-                            <SiteMoney value={drop.item.sellPrice} iconClassName="h-[1.1em] w-[1.1em]" />
+                            <SiteMoney value={drop.item.sellPrice} iconClassName="h-[1.1em] w-[1.1em] text-white" />
                           </button>
                         </div>
                       </div>
@@ -887,8 +885,8 @@ export default function CaseOpenPage() {
                             }}
                             className={
                               shortOnFunds
-                                ? "inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-cb-stroke/90 bg-gradient-to-r from-red-900/80 to-cb-flame/90 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition hover:brightness-110 sm:flex-none sm:px-8"
-                                : "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500/85 bg-transparent px-4 py-3 text-sm font-bold text-amber-400 transition hover:border-amber-400 hover:bg-amber-500/10 sm:px-5"
+                                ? `${SITE_MONEY_CTA_CLASS} flex-1 sm:flex-none sm:px-8`
+                                : "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-red-500/35 bg-zinc-950/90 px-4 py-3 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-red-400/50 hover:bg-zinc-900/95 sm:px-5"
                             }
                           >
                             {shortOnFunds ? (
@@ -920,13 +918,13 @@ export default function CaseOpenPage() {
                             onClick={() => {
                               void handleSellAllBatch();
                             }}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-bold text-zinc-900 shadow-md transition hover:brightness-110 disabled:opacity-45 sm:px-5"
+                            className={`${SITE_MONEY_CTA_CLASS} disabled:opacity-45 sm:px-5`}
                           >
                             <span className="text-base leading-none opacity-90" aria-hidden>
                               🛒
                             </span>
                             Продать всё за{" "}
-                            <SiteMoney value={batchSellTotalRub} iconClassName="h-[1.1em] w-[1.1em]" />
+                            <SiteMoney value={batchSellTotalRub} iconClassName="h-[1.1em] w-[1.1em] text-white" />
                           </button>
                         </div>
                       </div>
@@ -940,7 +938,7 @@ export default function CaseOpenPage() {
                       <button
                         type="button"
                         onClick={openCryptoTopUp}
-                        className="inline-flex w-full flex-1 items-center justify-center gap-2 rounded-xl border border-cb-stroke/90 bg-gradient-to-r from-red-900/80 to-cb-flame/90 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition hover:brightness-110 sm:max-w-md sm:flex-none sm:px-12"
+                        className={`${SITE_MONEY_CTA_WIDE_CLASS} max-w-md py-3.5 sm:px-12`}
                       >
                         Пополнить
                       </button>
@@ -950,7 +948,7 @@ export default function CaseOpenPage() {
                           type="button"
                           disabled={busyOpening}
                           onClick={openCase}
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-cb-stroke/90 bg-gradient-to-r from-red-900/80 to-cb-flame/90 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition hover:brightness-110 disabled:opacity-45 sm:flex-none sm:px-10"
+                          className={`${SITE_MONEY_CTA_CLASS} flex-1 py-3.5 sm:flex-none sm:px-10`}
                         >
                           <span aria-hidden>📦</span>
                           {spinWaiting
@@ -960,7 +958,7 @@ export default function CaseOpenPage() {
                               : (
                                   <>
                                     Открыть за{" "}
-                                    <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em]" />
+                                    <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em] text-white" />
                                   </>
                                 )}
                         </button>
@@ -970,7 +968,7 @@ export default function CaseOpenPage() {
                           onClick={() => {
                             void openCaseFast();
                           }}
-                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/55 bg-gradient-to-r from-amber-600/25 to-yellow-600/20 py-3.5 text-sm font-bold text-amber-200 shadow-md shadow-amber-950/20 transition hover:border-amber-400/70 hover:brightness-110 disabled:opacity-45 sm:flex-none sm:px-8"
+                          className={`${SITE_MONEY_CTA_CLASS} flex-1 border border-red-400/25 py-3.5 sm:flex-none sm:px-8`}
                           title={
                             openMultiplier > 1
                               ? "Без вертикальной рулетки — сразу все выпавшие предметы"
@@ -983,7 +981,7 @@ export default function CaseOpenPage() {
                             : (
                                 <>
                                   Быстро за{" "}
-                                  <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em]" />
+                                  <SiteMoney value={totalOpenPrice} iconClassName="h-[1.1em] w-[1.1em] text-white" />
                                 </>
                               )}
                         </button>
@@ -1014,12 +1012,8 @@ export default function CaseOpenPage() {
                       key={`${it.name}-${idx}`}
                       className="group relative flex flex-col overflow-hidden rounded-xl border border-cb-stroke/70 bg-[#0a0e14]/90 transition hover:border-orange-500/30"
                     >
-                      <div className="absolute left-2 top-2 z-10 max-w-[calc(100%-0.75rem)] rounded-md bg-gradient-to-r from-orange-600/90 to-red-600/90 px-1.5 py-0.5 text-[10px] font-bold shadow-md">
-                        <SiteMoney
-                          value={it.sellPrice}
-                          className="text-white"
-                          iconClassName="h-2.5 w-2.5 shrink-0 brightness-110 contrast-125"
-                        />
+                      <div className="absolute left-2 top-2 z-10 max-w-[calc(100%-0.75rem)]">
+                        <SitePriceBadge value={it.sellPrice} size="sm" />
                       </div>
                       <div
                         className="relative isolate aspect-square w-full p-2"

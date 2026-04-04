@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatRub } from "@/lib/money";
+import { SitePriceBadge } from "@/components/SitePriceBadge";
 import { preferHighResSteamEconomyImage } from "@/lib/steamImage";
-import { StormCoinSymbol } from "@/components/StormCoinSymbol";
 
 /** RGB акценту кейса (як у CASE_FRAMES) — підсвітка ззаду відповідає полю Accent у редакторі. */
 const ACCENT_RGB: Record<string, readonly [number, number, number]> = {
@@ -237,12 +236,7 @@ export function CaseCard({
         </div>
       </div>
       <div className="mt-2 flex flex-col items-center px-0.5 text-center sm:mt-2.5">
-        <span
-          className="inline-flex items-center gap-0.5 rounded-lg border border-orange-400/45 bg-gradient-to-r from-[#b91c1c]/95 via-[#ea580c] to-[#dc2626] px-3 py-1 font-mono text-xs font-black tabular-nums tracking-tight text-white shadow-[0_3px_14px_rgba(234,88,12,0.38),inset_0_1px_0_rgba(255,255,255,0.12)] sm:px-3.5 sm:py-1.5 sm:text-sm"
-        >
-          <span className="tabular-nums">{formatRub(c.price)}</span>
-          <StormCoinSymbol className="h-[1.2em] w-[1.2em] max-h-[18px] max-w-[18px] shrink-0" />
-        </span>
+        <SitePriceBadge value={c.price} size="md" />
       </div>
     </Link>
   );

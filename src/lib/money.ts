@@ -1,4 +1,4 @@
-/** Внутрішня валюта сайту (storm-coin); у UI — `StormCoinSymbol` або цей код. */
+/** Внутрішня валюта сайту (storm-coin); у UI — `SiteMoney` / блискавка або `SITE_CURRENCY_CODE`. */
 export const SITE_CURRENCY_CODE = "SC";
 export const SITE_CURRENCY_NAME = "storm-coin";
 
