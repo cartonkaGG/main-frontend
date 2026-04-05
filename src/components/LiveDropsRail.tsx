@@ -103,14 +103,18 @@ export function LiveDropsRail({ drops, children }: Props) {
 
   return (
     <div className="flex w-full flex-col lg:flex-row lg:items-start">
-      <aside className="relative hidden w-[min(13rem,100%)] shrink-0 flex-col border-r border-cb-stroke/80 bg-[#06060c]/95 lg:flex">
-        <div className="min-h-0 flex-1 overflow-hidden px-1.5 py-1.5 sm:px-2 sm:py-2">
+      {/*
+        Высота ленты ограничена viewport — иначе flex-линия растягивает страницу на все дропы.
+        Без скролла: лишнее обрезается (overflow-hidden).
+      */}
+      <aside className="relative hidden w-[min(13rem,100%)] shrink-0 flex-col border-r border-cb-stroke/80 bg-[#06060c]/95 lg:flex lg:min-h-0 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-hidden lg:sticky lg:top-0 lg:self-start">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-1.5 py-1.5 sm:px-2 sm:py-2">
           {drops.length === 0 ? (
             <p className="p-3 text-center text-[11px] leading-relaxed text-zinc-500">
               Пока нет дропов из кейсов и апгрейдов. Откройте кейс или выиграйте апгрейд — запись появится здесь в реальном времени.
             </p>
           ) : (
-            <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-black/30">
+            <div className="flex flex-col rounded-lg ring-1 ring-black/30">
               {drops.map((d) => (
                 <DropRow key={d.id} d={d} />
               ))}

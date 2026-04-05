@@ -16,8 +16,22 @@ function envClosedBetaFlag(): boolean {
   return v === "1" || v === "true" || v === "yes";
 }
 
+const BETA_STATUS_FETCH_MS = 10_000;
+const SESSION_FETCH_MS = 15_000;
+
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { credentials: "include", signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /**
  * Спочатку NEXT_PUBLIC_API_URL, потім той самий origin (/api/...) — працює з BACKEND_PROXY_URL у next.config.
+ * Таймаут на кожен запит — інакше при «мертвому» API екран «Загрузка…» не зникає нескінченно.
  */
 async function fetchPublicClosedBeta(): Promise<boolean | null> {
   const urls: string[] = [`${apiBase}/api/beta/public-status`];
@@ -28,7 +42,7 @@ async function fetchPublicClosedBeta(): Promise<boolean | null> {
   }
   for (const url of urls) {
     try {
-      const pr = await fetch(url, { credentials: "include" });
+      const pr = await fetchWithTimeout(url, BETA_STATUS_FETCH_MS);
       if (!pr.ok) continue;
       const pub = (await pr.json()) as PublicBeta;
       return Boolean(pub.closedBeta);
@@ -96,7 +110,15 @@ export function ClosedBetaBoundary({ children }: { children: React.ReactNode }) 
         setView("beta");
         return;
       }
-      const r = await apiFetch<MeSession>("/api/me/session");
+      const r = await Promise.race([
+        apiFetch<MeSession>("/api/me/session"),
+        new Promise<{ ok: false; status: number; error: string }>((resolve) =>
+          setTimeout(
+            () => resolve({ ok: false, status: 0, error: "Таймаут соединения с сервером" }),
+            SESSION_FETCH_MS,
+          ),
+        ),
+      ]);
       if (!r.ok) {
         if (r.status === 401) {
           clearToken();
