@@ -16,6 +16,7 @@ import { prefetchUpgradePageData } from "@/lib/upgradePrefetch";
 import { NavbarNotifications } from "@/components/NavbarNotifications";
 import { AdminWithdrawalAlerts } from "@/components/AdminWithdrawalAlerts";
 import { GlobalLegalFooter } from "@/components/GlobalLegalFooter";
+import { LegalAcceptanceRequiredModal } from "@/components/LegalAcceptanceRequiredModal";
 
 /** Дані шапки з легкого GET /api/me/session (без важкого /api/me). */
 type Me = {
@@ -32,6 +33,7 @@ type MeSessionApi = {
   balance?: number;
   isAdmin?: boolean;
   isSupportStaff?: boolean;
+  needsLegalAcceptance?: boolean;
 };
 
 type Props = {
@@ -90,6 +92,8 @@ export function SiteShell({ children }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cryptoTopUpOpen, setCryptoTopUpOpen] = useState(false);
   const [supportToast, setSupportToast] = useState<SupportReplyToast | null>(null);
+  /** Старые аккаунты без legalAcceptance — блокируем сайт, пока не отметят все галочки. */
+  const [needsLegalAcceptance, setNeedsLegalAcceptance] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -112,6 +116,7 @@ export function SiteShell({ children }: Props) {
   const loadMe = useCallback(async () => {
     if (!getToken()) {
       setMe(null);
+      setNeedsLegalAcceptance(false);
       return;
     }
     const r = await apiFetch<MeSessionApi>("/api/me/session");
@@ -123,7 +128,11 @@ export function SiteShell({ children }: Props) {
         isAdmin: r.data.isAdmin,
         isSupportStaff: r.data.isSupportStaff,
       });
-    } else setMe(null);
+      setNeedsLegalAcceptance(Boolean(r.data.needsLegalAcceptance));
+    } else {
+      setMe(null);
+      setNeedsLegalAcceptance(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -411,6 +420,10 @@ export function SiteShell({ children }: Props) {
         open={cryptoTopUpOpen}
         onClose={() => setCryptoTopUpOpen(false)}
         onSuccess={() => setCryptoTopUpOpen(false)}
+      />
+      <LegalAcceptanceRequiredModal
+        open={Boolean(hasBrowserToken && needsLegalAcceptance)}
+        onCompleted={() => void loadMe()}
       />
       <SupportFabLink />
     </div>

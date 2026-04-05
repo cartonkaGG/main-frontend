@@ -89,6 +89,21 @@ export function turnstileSiteKey(): string {
  * якщо на бекенді задано TURNSTILE_SECRET_KEY).
  */
 /** Подтверждение версий юр. документов перед первым входом Steam (httpOnly `cd_legal_gate`). */
+/** Сохранить согласие для уже вошедшего пользователя (без httpOnly-cookie для Steam). */
+export async function postMeAcceptLegal(payload: {
+  termsVersion: number;
+  privacyVersion: number;
+  cookiesVersion: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const r = await apiFetch<{ ok?: boolean }>("/api/me/accept-legal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true };
+}
+
 export async function postLegalAccept(payload: {
   termsVersion: number;
   privacyVersion: number;
