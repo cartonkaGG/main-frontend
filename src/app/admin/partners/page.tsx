@@ -335,6 +335,25 @@ export default function AdminPartnersPage() {
     }
   }
 
+  async function deletePartner(partnerId: string, displayLabel: string) {
+    const ok = window.confirm(
+      `Удалить партнёра «${displayLabel}»? Будут удалены промокоды, начисления и привязки рефералов. Роль пользователя станет обычной (user). Действие необратимо.`,
+    );
+    if (!ok) return;
+    setMsg(null);
+    const r = await apiFetch(`/api/admin/partners/${partnerId}`, { method: "DELETE" });
+    if (!r.ok) {
+      setMsg(r.error || "Ошибка удаления");
+      return;
+    }
+    if (cabinetId === partnerId) {
+      setCabinetId(null);
+      setCabinetData(null);
+    }
+    setMsg("Партнёр удалён.");
+    void load();
+  }
+
   return (
     <div className="space-y-10 text-sm">
       <div>
@@ -409,13 +428,24 @@ export default function AdminPartnersPage() {
                         <p className="font-mono text-[10px] text-zinc-600">userSub: {p.userSub}</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void openCabinet(p._id)}
-                      className="shrink-0 rounded-lg border border-sky-600/50 bg-sky-950/30 px-3 py-1.5 text-xs text-sky-200"
-                    >
-                      Просмотреть кабинет
-                    </button>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void openCabinet(p._id)}
+                        className="rounded-lg border border-sky-600/50 bg-sky-950/30 px-3 py-1.5 text-xs text-sky-200"
+                      >
+                        Просмотреть кабинет
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void deletePartner(p._id, p.displayName?.trim() || p.steamId || p.userSub)
+                        }
+                        className="rounded-lg border border-red-900/60 bg-red-950/25 px-3 py-1.5 text-xs text-red-200 hover:bg-red-950/40"
+                      >
+                        Удалить партнёра
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
