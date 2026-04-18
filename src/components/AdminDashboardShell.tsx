@@ -142,22 +142,8 @@ export function AdminDashboardShell({ children }: { children: React.ReactNode })
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/[0.06] bg-[#0a0a0a]/95 px-4 py-3 backdrop-blur-md sm:px-6">
-          <div className="relative min-w-0 flex-1 max-w-xl">
-            <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-600">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M20 20l-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </span>
-            <input
-              type="search"
-              readOnly
-              placeholder="Поиск по админке…"
-              className="w-full rounded-xl border border-white/[0.08] bg-[#111]/90 py-2.5 pl-10 pr-4 text-sm text-zinc-300 placeholder:text-zinc-600 focus:border-cb-flame/40 focus:outline-none focus:ring-1 focus:ring-cb-flame/30"
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center justify-end gap-3 border-b border-white/[0.06] bg-[#0a0a0a]/95 px-4 py-3 backdrop-blur-md sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3">
             {me && (
               <div className="hidden items-center gap-2 rounded-xl border border-white/[0.08] bg-black/40 px-2 py-1.5 sm:flex">
                 <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Баланс</span>
