@@ -7,19 +7,37 @@ import { PromoHeroBanner } from "@/components/PromoHeroBanner";
 import { SiteShell } from "@/components/SiteShell";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/categories";
 import { apiFetch } from "@/lib/api";
+import {
+  DEFAULT_HOME_PROMO_HERO,
+  mergeHomePromoHero,
+  type SiteUiPublic,
+} from "@/lib/siteUi";
 
-type SiteUiPublic = {
-  homeCaseImageScale: number;
-  homeSkinImageScale: number;
+/** Скільки перших карток у сітці отримують preload / важчі прев’ю (LCP і верх каталогу). */
+const HOME_CARD_IMAGE_PRELOAD = 10;
+
+type Props = {
+  /** З SSR: каталог уже в HTML, картинки стартують одразу. undefined — з клієнта підвантажити /api/cases */
+  initialCases?: CaseSummary[];
+  initialSiteUi?: Partial<SiteUiPublic>;
 };
 
-export function HomePage() {
-  const [cases, setCases] = useState<CaseSummary[]>([]);
+export function HomePage({ initialCases, initialSiteUi }: Props) {
+  const [cases, setCases] = useState<CaseSummary[]>(() => initialCases ?? []);
   const [error, setError] = useState<string | null>(null);
-  const [siteUi, setSiteUi] = useState<SiteUiPublic>({
-    homeCaseImageScale: 100,
-    homeSkinImageScale: 100,
-  });
+  const [siteUi, setSiteUi] = useState<SiteUiPublic>(() => ({
+    homeCaseImageScale:
+      typeof initialSiteUi?.homeCaseImageScale === "number" &&
+      Number.isFinite(initialSiteUi.homeCaseImageScale)
+        ? initialSiteUi.homeCaseImageScale
+        : 100,
+    homeSkinImageScale:
+      typeof initialSiteUi?.homeSkinImageScale === "number" &&
+      Number.isFinite(initialSiteUi.homeSkinImageScale)
+        ? initialSiteUi.homeSkinImageScale
+        : 100,
+    homePromoHero: mergeHomePromoHero(initialSiteUi?.homePromoHero ?? DEFAULT_HOME_PROMO_HERO),
+  }));
   /** Если /api/site-ui недоступен (часто — не перезапущен backend), пользователь остаётся на 100%. */
   const [siteUiLoadIssue, setSiteUiLoadIssue] = useState<string | null>(null);
 
@@ -45,7 +63,8 @@ export function HomePage() {
         typeof d.homeSkinImageScale === "number" && Number.isFinite(d.homeSkinImageScale)
           ? d.homeSkinImageScale
           : 100;
-      setSiteUi({ homeCaseImageScale, homeSkinImageScale });
+      const homePromoHero = mergeHomePromoHero(d.homePromoHero);
+      setSiteUi({ homeCaseImageScale, homeSkinImageScale, homePromoHero });
       setSiteUiLoadIssue(null);
       return;
     }
@@ -66,9 +85,9 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    loadCases();
-    void loadSiteUi();
-  }, [loadCases, loadSiteUi]);
+    if (initialCases === undefined) void loadCases();
+    if (initialSiteUi === undefined) void loadSiteUi();
+  }, [initialCases, initialSiteUi, loadCases, loadSiteUi]);
 
   useEffect(() => {
     const h = () => loadCases();
@@ -101,7 +120,7 @@ export function HomePage() {
 
   return (
     <SiteShell>
-      <PromoHeroBanner />
+      <PromoHeroBanner hero={siteUi.homePromoHero} />
 
       {siteUiLoadIssue && (
         <div className="border-b border-amber-500/35 bg-amber-950/40 px-4 py-2 text-center text-xs text-amber-200/95">
@@ -117,12 +136,13 @@ export function HomePage() {
               Рекомендуемые
             </h2>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {featured.map((c) => (
+              {featured.map((c, i) => (
                 <CaseCard
                   key={c.slug}
                   c={c}
                   homeCaseScalePct={siteUi.homeCaseImageScale}
                   homeSkinScalePct={siteUi.homeSkinImageScale}
+                  preloadImages={i < HOME_CARD_IMAGE_PRELOAD}
                 />
               ))}
             </div>
@@ -159,12 +179,13 @@ export function HomePage() {
                   />
                 </h2>
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {list.map((c) => (
+                  {list.map((c, i) => (
                     <CaseCard
                       key={c.slug}
                       c={c}
                       homeCaseScalePct={siteUi.homeCaseImageScale}
                       homeSkinScalePct={siteUi.homeSkinImageScale}
+                      preloadImages={i < HOME_CARD_IMAGE_PRELOAD}
                     />
                   ))}
                 </div>

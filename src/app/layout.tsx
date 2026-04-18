@@ -71,6 +71,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className={`dark min-h-dvh ${jetbrainsMono.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://community.cloudflare.steamstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.cloudflare.steamstatic.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://community.cloudflare.steamstatic.com" />
+        <link rel="dns-prefetch" href="https://cdn.cloudflare.steamstatic.com" />
+      </head>
       <body className="relative min-h-dvh bg-[#020204] text-zinc-100 antialiased [-webkit-tap-highlight-color:transparent]">
         <div className="cb-backdrop" aria-hidden>
           <StormAtmosphere />

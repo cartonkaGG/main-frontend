@@ -54,7 +54,7 @@ export function AdminSubNav() {
             Кейсы
           </Link>
           <Link href="/admin/site-ui" className={linkClass}>
-            Главная (карточки)
+            Главная: банер и карточки
           </Link>
           <Link href="/admin/legal-docs" className={linkClass}>
             Юридические документы

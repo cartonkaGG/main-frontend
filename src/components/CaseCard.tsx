@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { SitePriceBadge } from "@/components/SitePriceBadge";
-import { preferHighResSteamEconomyImage } from "@/lib/steamImage";
+import { preferHighResSteamEconomyImage, type SteamEconomyImageMode } from "@/lib/steamImage";
 
 /** RGB акценту кейса (як у CASE_FRAMES) — підсвітка ззаду відповідає полю Accent у редакторі. */
 const ACCENT_RGB: Record<string, readonly [number, number, number]> = {
@@ -87,12 +87,15 @@ export type CaseCardProps = {
   c: CaseSummary;
   homeCaseScalePct?: number;
   homeSkinScalePct?: number;
+  /** Перші картки каталогу: preload + вищий пріоритет мережі; для решти — легші Steam URL (compat). */
+  preloadImages?: boolean;
 };
 
 export function CaseCard({
   c,
   homeCaseScalePct = 100,
   homeSkinScalePct = 100,
+  preloadImages = false,
 }: CaseCardProps) {
   const cardCase = Math.min(180, Math.max(40, Math.round(Number(c.cardCaseImageScale) || 100)));
   const cardSkin = Math.min(180, Math.max(40, Math.round(Number(c.cardSkinImageScale) || 100)));
@@ -108,8 +111,11 @@ export function CaseCard({
   const caseS = casePct / 100;
   const skinS = skinPct / 100;
 
-  const caseSrc = c.image ? preferHighResSteamEconomyImage(c.image, "caseArt") ?? c.image : null;
-  const skinSrc = c.skinImage ? preferHighResSteamEconomyImage(c.skinImage) ?? c.skinImage : null;
+  const urgent = Boolean(c.featured || preloadImages);
+  const caseEconomyMode: SteamEconomyImageMode = urgent ? "caseArt" : "compat";
+  const skinEconomyMode: SteamEconomyImageMode = urgent ? "sharp" : "compat";
+  const caseSrc = c.image ? preferHighResSteamEconomyImage(c.image, caseEconomyMode) ?? c.image : null;
+  const skinSrc = c.skinImage ? preferHighResSteamEconomyImage(c.skinImage, skinEconomyMode) ?? c.skinImage : null;
   const [nr, ng, nb] = rgbForAccent(c.accent);
   /** Неон як у задній підсвітці кейса (той самий accent). */
   const caseNameGlow = `0 0 10px rgba(${nr},${ng},${nb},0.85), 0 0 22px rgba(${nr},${ng},${nb},0.55), 0 0 38px rgba(${nr},${ng},${nb},0.32), 0 1px 2px rgba(0,0,0,0.92)`;
@@ -120,6 +126,8 @@ export function CaseCard({
 
   const caseSizes = "(max-width: 640px) 92vw, (max-width: 1280px) 36vw, (max-width: 1536px) 30vw, 560px";
   const skinSizes = "(max-width: 640px) 62vw, (max-width: 1280px) 26vw, 440px";
+  const imgPriority = urgent;
+  const fetchPri: "high" | "low" | "auto" = urgent ? "high" : "auto";
 
   return (
     <Link
@@ -159,8 +167,9 @@ export function CaseCard({
                   fill
                   className={caseImageClass}
                   sizes={caseSizes}
-                  quality={100}
-                  priority={Boolean(c.featured)}
+                  quality={urgent ? 92 : 80}
+                  priority={imgPriority}
+                  fetchPriority={fetchPri}
                   unoptimized
                 />
               </div>
@@ -177,8 +186,9 @@ export function CaseCard({
                     fill
                     className="object-contain drop-shadow-[0_8px_28px_rgba(0,0,0,0.58)] [transform:translateZ(0)] [image-rendering:high-quality] [-webkit-backface-visibility:hidden]"
                     sizes={skinSizes}
-                    quality={100}
-                    priority={Boolean(c.featured)}
+                    quality={urgent ? 92 : 80}
+                    priority={imgPriority}
+                    fetchPriority={fetchPri}
                     unoptimized
                   />
                 </div>
@@ -199,8 +209,9 @@ export function CaseCard({
                   fill
                   className={caseImageClass}
                   sizes={caseSizes}
-                  quality={100}
-                  priority={Boolean(c.featured)}
+                  quality={urgent ? 92 : 80}
+                  priority={imgPriority}
+                  fetchPriority={fetchPri}
                   unoptimized
                 />
               </div>
@@ -226,7 +237,9 @@ export function CaseCard({
                   fill
                   className="object-contain drop-shadow-[0_8px_28px_rgba(0,0,0,0.58)] [transform:translateZ(0)] [image-rendering:high-quality] [-webkit-backface-visibility:hidden]"
                   sizes={skinSizes}
-                  quality={100}
+                  quality={urgent ? 92 : 80}
+                  priority={imgPriority}
+                  fetchPriority={fetchPri}
                   unoptimized
                 />
               </div>
