@@ -76,13 +76,15 @@ export function mergeHomePromoHero(raw: unknown): HomePromoHeroConfig {
   }
   const o = raw as Partial<HomePromoHeroConfig>;
   const buttons = Array.isArray(o.buttons)
-    ? o.buttons
+    ? (o.buttons as unknown[])
         .filter(
-          (b): b is Record<string, unknown> =>
-            !!b && typeof b === "object" && typeof (b as { href?: string }).href === "string",
+          (b): b is object & { href: string } =>
+            !!b &&
+            typeof b === "object" &&
+            typeof (b as { href?: unknown }).href === "string",
         )
         .map((b) => {
-          const href = String((b as { href: string }).href);
+          const href = String(b.href);
           const labelRaw = (b as { label?: unknown }).label;
           const label =
             typeof labelRaw === "string" && labelRaw.trim().length > 0 ? labelRaw.trim() : "Перейти";
