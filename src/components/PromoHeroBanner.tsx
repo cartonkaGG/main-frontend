@@ -296,11 +296,11 @@ export function PromoHeroBanner({ hero }: Props) {
               ) : null}
 
               <div className="mt-auto flex min-h-0 flex-col justify-end gap-3 pt-2 sm:mt-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-                <div className="flex min-w-0 shrink-0 flex-col justify-end pt-4 sm:pt-6">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-300/90 sm:text-[10px]">
+                <div className="flex min-w-0 shrink-0 flex-col justify-end pt-8 sm:pt-10">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-cb-flame/95 sm:text-[10px]">
                     Осталось времени
                   </p>
-                  <p className="mt-0.5 font-mono text-xl font-bold tabular-nums tracking-wide text-white sm:text-2xl">
+                  <p className="mt-0.5 font-mono text-xl font-bold tabular-nums tracking-wide text-cb-flame drop-shadow-[0_0_14px_rgba(255,49,49,0.45)] sm:text-2xl">
                     {featured && remaining == null
                       ? "Бессрочно"
                       : remaining != null && remaining <= 0
@@ -310,10 +310,10 @@ export function PromoHeroBanner({ hero }: Props) {
                           : "— — —"}
                   </p>
                   {remaining != null && remaining <= 0 && featured && (
-                    <p className="mt-1 text-xs font-medium text-red-400/90">Акция завершена</p>
+                    <p className="mt-1 text-xs font-medium text-cb-flame/90">Акция завершена</p>
                   )}
                   {featured && remaining == null && (
-                    <p className="mt-1 text-xs text-zinc-500">Без дедлайна</p>
+                    <p className="mt-1 text-xs text-cb-flame/75">Без дедлайна</p>
                   )}
                 </div>
 
