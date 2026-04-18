@@ -296,7 +296,7 @@ export function PromoHeroBanner({ hero }: Props) {
               ) : null}
 
               <div className="mt-auto flex min-h-0 flex-col justify-end gap-3 pt-2 sm:mt-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-                <div className="flex min-w-0 shrink-0 flex-col justify-end pt-4 sm:pt-6">
+                <div className="flex min-w-0 shrink-0 flex-col justify-end">
                   <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-300/90 sm:text-[10px]">
                     Осталось времени
                   </p>
