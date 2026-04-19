@@ -20,20 +20,24 @@ const ART = {
 
 export type PublicProfileStatHeroVariant = keyof typeof ART;
 
-type Props = { variant: PublicProfileStatHeroVariant; className?: string };
+type Props = { variant: PublicProfileStatHeroVariant; className?: string; compact?: boolean };
 
 /**
  * 3D-арт для блоків статистики публичного профіля. Батьківський рядок має мати `group`, щоб спрацьовував легкий hover-scale.
+ * `compact` — нижча картка статистики (публічний профіль).
  */
-export function PublicProfileStatHeroArt({ variant, className = "" }: Props) {
+export function PublicProfileStatHeroArt({ variant, className = "", compact }: Props) {
   const cfg = ART[variant];
+  const outer = compact
+    ? "h-[4.25rem] w-[4.25rem] shrink-0 sm:h-[4.75rem] sm:w-[4.75rem]"
+    : "h-[6.25rem] w-[6.25rem] shrink-0 sm:h-[7.25rem] sm:w-[7.25rem]";
+  const inner = compact
+    ? "h-[8.5rem] w-[8.5rem] translate-x-5 -translate-y-1/2 sm:h-[9.5rem] sm:w-[9.5rem] sm:translate-x-6"
+    : "h-[12.5rem] w-[12.5rem] translate-x-10 -translate-y-1/2 sm:h-[14.5rem] sm:w-[14.5rem] sm:translate-x-12";
   return (
-    <div
-      className={`pointer-events-none relative h-[6.25rem] w-[6.25rem] shrink-0 sm:h-[7.25rem] sm:w-[7.25rem] ${className}`}
-      aria-hidden
-    >
+    <div className={`pointer-events-none relative ${outer} ${className}`} aria-hidden>
       {/* Великий арт поза потоком; зсув вправо — трохи виступає за правий край картки */}
-      <div className="absolute right-0 top-1/2 z-[1] h-[12.5rem] w-[12.5rem] translate-x-10 -translate-y-1/2 sm:h-[14.5rem] sm:w-[14.5rem] sm:translate-x-12">
+      <div className={`absolute right-0 top-1/2 z-[1] ${inner}`}>
         <div className="flex h-full w-full items-center justify-center motion-reduce:animate-none motion-reduce:transition-none animate-pp-stat-bob transition duration-500 ease-out will-change-transform group-hover:scale-[1.06]">
           <Image
             src={cfg.src}

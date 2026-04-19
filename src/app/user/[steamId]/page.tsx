@@ -177,71 +177,32 @@ function PublicUserBody({ steamId }: { steamId: string }) {
 
   return (
     <SiteShell>
-      <div className="relative mx-auto max-w-[min(92rem,100%)] px-2.5 py-6 sm:px-5 sm:py-9">
-        <div className="group/card relative overflow-hidden rounded-2xl border border-orange-500/30 bg-[#060a12] shadow-[0_0_48px_-22px_rgba(234,88,12,0.35)] transition-[box-shadow,border-color] duration-700 ease-out hover:border-orange-400/35 hover:shadow-[0_0_64px_-18px_rgba(249,115,22,0.38)] motion-reduce:transition-none sm:rounded-[1.35rem]">
+      <div className="relative mx-auto w-full max-w-[min(96rem,calc(100vw-1.5rem))] px-4 pb-20 pt-8 sm:px-6 sm:pb-24 sm:pt-10 lg:px-12">
+        <div className="relative overflow-hidden rounded-2xl border border-cb-stroke/70 bg-gradient-to-b from-[#0a0a0f]/95 via-cb-panel/50 to-black/90 bg-cb-mesh shadow-[inset_0_1px_0_rgba(255,49,49,0.08),0_20px_60px_rgba(0,0,0,0.35)]">
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-950/25 via-transparent to-orange-950/15"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -left-1/4 top-1/2 h-[min(72vw,520px)] w-[min(72vw,520px)] -translate-y-1/2 rounded-full bg-orange-600/12 blur-3xl motion-reduce:animate-none animate-pp-orb-drift"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -right-1/4 top-0 h-[min(58vw,440px)] w-[min(58vw,440px)] rounded-full bg-violet-600/14 blur-3xl motion-reduce:animate-none animate-pp-orb-drift-slow"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.055] motion-reduce:opacity-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-              backgroundSize: "44px 44px",
-              maskImage: "radial-gradient(ellipse 88% 70% at 50% 22%, black, transparent 74%)",
-            }}
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_40%,rgba(255,49,49,0.07)_50%,transparent_60%)]"
             aria-hidden
           />
 
-          <div className="relative p-4 sm:p-6">
-            <div className="mb-3 flex justify-center sm:justify-start">
-              <div className="flex items-center gap-2 motion-reduce:animate-none animate-pp-fade-up">
-                <span
-                  className="inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400 shadow-[0_0_12px_rgba(251,146,60,0.9)] motion-reduce:animate-none motion-reduce:shadow-none animate-pp-label-shine"
-                  aria-hidden
-                />
-                <p className="text-center text-[9px] font-bold uppercase tracking-[0.28em] text-orange-300/95 sm:text-left">
-                  Публичный профиль
-                </p>
-              </div>
+          <div className="relative px-4 pb-8 pt-6 sm:px-8 sm:pt-8">
+            <div className="mb-5 flex justify-center sm:justify-start">
+              <p className="text-center text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 sm:text-left sm:text-[11px]">
+                Публичный профиль
+              </p>
             </div>
 
             {loading ? (
-              <div
-                className="grid grid-cols-1 gap-3 py-1 motion-reduce:animate-none animate-pp-fade-in lg:grid-cols-12"
-                aria-busy
-              >
-                <div className="h-44 rounded-xl bg-zinc-800/75 motion-reduce:animate-none animate-pp-skeleton lg:col-span-4" />
-                <div
-                  className="h-52 rounded-xl bg-zinc-800/65 motion-reduce:animate-none animate-pp-skeleton lg:col-span-4"
-                  style={{ animationDelay: "80ms" }}
-                />
-                <div className="flex flex-col gap-2 lg:col-span-4">
-                  <div
-                    className="h-24 rounded-xl bg-zinc-800/55 motion-reduce:animate-none animate-pp-skeleton"
-                    style={{ animationDelay: "140ms" }}
-                  />
-                  <div
-                    className="h-24 rounded-xl bg-zinc-800/55 motion-reduce:animate-none animate-pp-skeleton"
-                    style={{ animationDelay: "200ms" }}
-                  />
-                  <div
-                    className="h-24 rounded-xl bg-zinc-800/55 motion-reduce:animate-none animate-pp-skeleton"
-                    style={{ animationDelay: "260ms" }}
-                  />
+              <div className="grid grid-cols-1 gap-2 py-1 lg:grid-cols-12" aria-busy>
+                <div className="h-36 animate-pulse rounded-xl border border-cb-stroke/40 bg-black/35 lg:col-span-4" />
+                <div className="h-40 animate-pulse rounded-xl border border-cb-stroke/40 bg-black/35 lg:col-span-4" />
+                <div className="flex flex-col gap-1.5 lg:col-span-4">
+                  <div className="h-[4.25rem] animate-pulse rounded-xl border border-cb-stroke/40 bg-black/35" />
+                  <div className="h-[4.25rem] animate-pulse rounded-xl border border-cb-stroke/40 bg-black/35" />
+                  <div className="h-[4.25rem] animate-pulse rounded-xl border border-cb-stroke/40 bg-black/35" />
                 </div>
               </div>
             ) : err ? (
-              <div className="motion-reduce:animate-none animate-pp-fade-in py-8 text-center">
+              <div className="py-8 text-center">
                 <p className="text-sm text-red-300/95">{err}</p>
                 <Link
                   href="/"
@@ -252,18 +213,12 @@ function PublicUserBody({ steamId }: { steamId: string }) {
               </div>
             ) : data ? (
               <>
-                <div className="motion-reduce:animate-none animate-pp-fade-up flex flex-col gap-3 border-b border-cb-stroke/35 pb-5 lg:grid lg:grid-cols-12 lg:items-stretch lg:gap-3">
-                  {/* Ліва колонка — користувач + кейси */}
-                  <div className="flex flex-col items-center gap-3 rounded-xl border border-cb-stroke/50 bg-gradient-to-b from-white/[0.04] to-black/35 p-4 shadow-inner lg:col-span-4 lg:items-stretch">
-                    <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-start lg:flex-col lg:items-center">
+                <div className="flex flex-col gap-3 border-b border-cb-stroke/35 pb-5 lg:grid lg:grid-cols-12 lg:items-start lg:gap-3">
+                  {/* Ліва колонка — користувач + Steam */}
+                  <div className="flex flex-col items-center gap-2 rounded-xl border border-cb-stroke/55 bg-black/40 p-3 shadow-inner sm:gap-2.5 sm:p-3.5 lg:col-span-4">
+                    <div className="flex w-full flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-start sm:gap-3 lg:flex-col lg:items-center">
                       <div className="relative shrink-0">
-                        <div
-                          className="pointer-events-none absolute -inset-[2px] rounded-xl opacity-90 motion-reduce:hidden"
-                          aria-hidden
-                        >
-                          <div className="h-full w-full rounded-xl bg-[conic-gradient(from_0deg,#ea5808,#a855f7,#0ea5e9,#f97316,#ea5808)] blur-[0.75px]" />
-                        </div>
-                        <div className="relative h-[4.75rem] w-[4.75rem] overflow-hidden rounded-xl border border-white/10 bg-black/55 shadow-lg ring-1 ring-white/[0.06] sm:h-[5.25rem] sm:w-[5.25rem]">
+                        <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-cb-stroke/60 bg-black/50 ring-2 ring-cb-flame/35 sm:h-[4.25rem] sm:w-[4.25rem]">
                           {data.avatar ? (
                             <Image
                               src={data.avatar}
@@ -279,12 +234,9 @@ function PublicUserBody({ steamId }: { steamId: string }) {
                         </div>
                       </div>
                       <div className="min-w-0 flex-1 text-center sm:text-left lg:text-center">
-                        <h1 className="text-base font-black tracking-tight text-white sm:text-lg">{data.displayName}</h1>
-                        <p
-                          className="mt-0.5 font-mono text-[10px] text-zinc-500"
-                          title={data.steamId}
-                        >
-                          ID {data.steamId.length > 8 ? `…${data.steamId.slice(-6)}` : data.steamId}
+                        <h1 className="text-sm font-black tracking-tight text-white sm:text-base">{data.displayName}</h1>
+                        <p className="mt-0.5 line-clamp-2 break-all font-mono text-[9px] leading-tight text-zinc-500 sm:text-[10px]">
+                          {data.steamId}
                         </p>
                       </div>
                     </div>
@@ -292,31 +244,37 @@ function PublicUserBody({ steamId }: { steamId: string }) {
                       href={`https://steamcommunity.com/profiles/${encodeURIComponent(data.steamId)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-500/35 bg-sky-950/25 px-3 py-2 text-xs font-bold text-sky-100 transition hover:border-sky-400/50 hover:bg-sky-950/40"
+                      className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-cb-stroke/60 bg-black/45 transition hover:border-sky-500/45 hover:bg-sky-950/20"
+                      aria-label="Профиль в Steam"
+                      title="Профиль в Steam"
                     >
-                      Steam
-                      <span className="text-sky-300/80" aria-hidden>
-                        ↗
-                      </span>
+                      <Image
+                        src="/brand/steam-mark.png"
+                        alt=""
+                        width={26}
+                        height={26}
+                        className="h-[1.35rem] w-[1.35rem] object-contain"
+                        unoptimized
+                      />
                     </a>
                   </div>
 
                   {/* Центр — лучший дроп */}
-                  <div className="flex min-h-[12rem] flex-col lg:col-span-4 lg:min-h-[15rem]">
+                  <div className="flex min-h-0 flex-col lg:col-span-4">
                     {data.bestEverItem && data.bestEverItem.name ? (
-                      <div className="relative flex h-full min-h-[12rem] flex-col overflow-hidden rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-950/40 via-[#0a0a12] to-black/80 p-3 shadow-[0_0_36px_-14px_rgba(245,158,11,0.28)] sm:min-h-[15.5rem] sm:p-4 lg:min-h-0">
+                      <div className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-cb-stroke/60 bg-gradient-to-br from-amber-950/20 via-[#09090d] to-black/85 p-2.5 shadow-inner ring-1 ring-amber-600/15 sm:p-3">
                         <div className="relative z-[1] flex items-start justify-between gap-2">
-                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/95">
+                          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-200/95 sm:text-[10px]">
                             Лучший дроп
                           </p>
                           <SiteMoney
                             value={data.bestEverItem.sellPrice}
-                            className="text-sm font-black text-amber-100"
-                            iconClassName="h-4 w-4 text-amber-400"
+                            className="text-xs font-black text-amber-100 sm:text-sm"
+                            iconClassName="h-3.5 w-3.5 text-amber-400 sm:h-4 sm:w-4"
                           />
                         </div>
-                        <div className="relative z-[1] flex flex-1 items-center justify-center py-1 sm:py-2">
-                          <div className="relative h-[12.5rem] w-[94%] max-w-[20rem] sm:h-[14.75rem] sm:max-w-[24rem]">
+                        <div className="relative z-[1] flex flex-1 items-center justify-center py-0.5 sm:py-1">
+                          <div className="relative h-[9rem] w-[92%] max-w-[17rem] sm:h-[10.5rem] sm:max-w-[19rem]">
                             <div
                               className="pointer-events-none absolute inset-0 z-0 overflow-visible motion-reduce:opacity-70"
                               aria-hidden
@@ -344,9 +302,9 @@ function PublicUserBody({ steamId }: { steamId: string }) {
                             )}
                           </div>
                         </div>
-                        <div className="relative z-[1] mt-auto flex flex-wrap items-end justify-between gap-2 border-t border-amber-500/20 pt-2.5">
+                        <div className="relative z-[1] mt-auto flex flex-wrap items-end justify-between gap-1.5 border-t border-amber-500/20 pt-2">
                           <div className="min-w-0">
-                            <p className="line-clamp-2 text-left text-xs font-semibold leading-snug text-white sm:text-sm">
+                            <p className="line-clamp-2 text-left text-[11px] font-semibold leading-snug text-white sm:text-xs">
                               {data.bestEverItem.name}
                             </p>
                             {data.bestEverItem.rarity ? (
@@ -367,7 +325,7 @@ function PublicUserBody({ steamId }: { steamId: string }) {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex h-full min-h-[11rem] flex-col items-center justify-center rounded-xl border border-dashed border-cb-stroke/45 bg-black/25 p-4 text-center lg:min-h-[13.5rem]">
+                      <div className="flex min-h-[8rem] flex-col items-center justify-center rounded-xl border border-dashed border-cb-stroke/45 bg-black/25 p-3 text-center sm:min-h-[9rem]">
                         <p className="text-xs text-zinc-500">Нет данных о лучшем предмете</p>
                       </div>
                     )}
@@ -375,53 +333,54 @@ function PublicUserBody({ steamId }: { steamId: string }) {
 
                   {/* Права колонка — кейсы, вывод, апгрейды */}
                   {st ? (
-                    <div className="flex flex-col gap-2 overflow-visible lg:col-span-4">
-                      <div className="group relative z-[1] flex items-center justify-between gap-2 overflow-visible rounded-xl border border-orange-500/25 bg-gradient-to-r from-black/40 to-orange-950/20 px-3 py-2.5 shadow-sm transition hover:border-orange-400/35 sm:py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-white">Открыто кейсов:</p>
-                          <p className="mt-1 text-xl font-black tabular-nums text-white">{st.casesOpened}</p>
+                    <div className="flex flex-col gap-1.5 overflow-visible lg:col-span-4">
+                      <div className="group relative z-[1] flex min-h-0 items-center justify-between gap-1.5 overflow-hidden rounded-xl border border-cb-stroke/55 bg-black/40 px-2.5 py-2 shadow-inner transition hover:border-cb-flame/25 sm:px-3">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[10px]">
+                            Открыто кейсов
+                          </p>
+                          <p className="mt-0.5 font-mono text-lg font-black tabular-nums leading-none text-cb-flame sm:text-xl">
+                            {st.casesOpened}
+                          </p>
                         </div>
-                        <PublicProfileStatHeroArt variant="cases" />
+                        <PublicProfileStatHeroArt variant="cases" compact />
                       </div>
-                      <div className="group relative z-[2] flex items-center justify-between gap-2 overflow-visible rounded-xl border border-sky-500/25 bg-gradient-to-r from-black/40 to-sky-950/20 px-3 py-2.5 shadow-sm transition hover:border-sky-400/35 sm:py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-white">Выведено:</p>
-                          <p className="mt-0.5 text-xs text-zinc-500">
+                      <div className="group relative z-[2] flex min-h-0 items-center justify-between gap-1.5 overflow-hidden rounded-xl border border-cb-stroke/55 bg-black/40 px-2.5 py-2 shadow-inner transition hover:border-cb-flame/25 sm:px-3">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[10px]">Выведено</p>
+                          <p className="mt-0.5 text-[10px] leading-tight text-zinc-500 sm:text-[11px]">
                             {ruPredmetCountLabel(st.withdrawalsCompletedCount ?? 0)}
                           </p>
-                          <div className="mt-1.5">
+                          <div className="mt-0.5">
                             <SiteMoney
                               value={st.withdrawalsCompletedTotalRub ?? 0}
-                              className="text-sm font-black text-zinc-100"
-                              iconClassName="h-4 w-4 text-amber-400"
+                              className="text-xs font-black text-zinc-200 sm:text-sm"
+                              iconClassName="h-3.5 w-3.5 text-cb-flame sm:h-4 sm:w-4"
                             />
                           </div>
                         </div>
-                        <PublicProfileStatHeroArt variant="withdraw" />
+                        <PublicProfileStatHeroArt variant="withdraw" compact />
                       </div>
-                      <div className="group relative z-[3] flex items-center justify-between gap-2 overflow-visible rounded-xl border border-violet-500/25 bg-gradient-to-r from-black/40 to-violet-950/20 px-3 py-2.5 shadow-sm transition hover:border-violet-400/35 sm:py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-white">Апгрейдов сделано:</p>
-                          <p className="mt-1 flex items-center gap-1.5 text-xl font-black tabular-nums text-white">
-                            <span
-                              className="inline-flex -translate-y-px flex-col text-[9px] font-black leading-[0.55] text-amber-400 motion-reduce:animate-none animate-pp-stat-zap"
-                              aria-hidden
-                            >
-                              <span>▲</span>
-                              <span>▲</span>
-                            </span>
+                      <div className="group relative z-[3] flex min-h-0 items-center justify-between gap-1.5 overflow-hidden rounded-xl border border-cb-stroke/55 bg-black/40 px-2.5 py-2 shadow-inner transition hover:border-cb-flame/25 sm:px-3">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[10px]">
+                            Апгрейдов сделано
+                          </p>
+                          <p className="mt-0.5 font-mono text-lg font-black tabular-nums leading-none text-cb-flame sm:text-xl">
                             {st.upgradesDone}
                           </p>
                         </div>
-                        <PublicProfileStatHeroArt variant="upgrade" />
+                        <PublicProfileStatHeroArt variant="upgrade" compact />
                       </div>
                     </div>
                   ) : null}
                 </div>
 
                 <div id="public-activity" className="mt-6 scroll-mt-20">
-                  <h2 className="text-sm font-black uppercase tracking-wide text-white">История предметов</h2>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400 sm:text-xs">
+                    История предметов
+                  </h2>
+                  <p className="mt-1 text-[11px] text-zinc-500 sm:text-xs">
                     8 предметов в ширину, подгружается по {resolvedPageSize} шт.
                     {activityTotal > 0 ? (
                       <>
@@ -435,7 +394,7 @@ function PublicUserBody({ steamId }: { steamId: string }) {
 
                   <div className="relative mt-4">
                     {loadMoreBusy ? (
-                      <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#060a12]/60 pt-8 backdrop-blur-[1px]">
+                      <div className="absolute inset-0 z-10 flex items-start justify-center bg-black/55 pt-8 backdrop-blur-[1px]">
                         <span className="text-xs text-zinc-400">Загрузка…</span>
                       </div>
                     ) : null}
@@ -466,7 +425,7 @@ function PublicUserBody({ steamId }: { steamId: string }) {
                         type="button"
                         disabled={loadMoreBusy}
                         onClick={() => void loadMore()}
-                        className="rounded-xl border-2 border-cb-stroke/70 bg-zinc-950/80 px-8 py-3 text-sm font-bold uppercase tracking-wide text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-cb-flame/50 hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        className="rounded-xl border border-cb-stroke/60 bg-black/40 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-zinc-300 shadow-inner transition hover:border-cb-flame/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         {loadMoreBusy ? "Загрузка…" : "Загрузить ещё"}
                       </button>

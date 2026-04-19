@@ -8,6 +8,16 @@ import { SiteMoney } from "@/components/SiteMoney";
 import { NavbarNotifications } from "@/components/NavbarNotifications";
 import { AdminWithdrawalAlerts } from "@/components/AdminWithdrawalAlerts";
 import { NavbarUserMenu } from "@/components/NavbarUserMenu";
+import {
+  adminNavLogsLinks,
+  adminNavMainLinks,
+  adminNavPartnerLinks,
+  adminNavRestLinks,
+  isAdminPathActive,
+  isUnderAdminLogs,
+  isUnderAdminMain,
+  isUnderAdminPartner,
+} from "@/config/adminNav";
 
 type Session = {
   displayName: string;
@@ -17,27 +27,6 @@ type Session = {
   isSupportStaff?: boolean;
   isPartner?: boolean;
 };
-
-const adminLinks: { href: string; label: string }[] = [
-  { href: "/admin/stats", label: "Статистика" },
-  { href: "/admin/cases", label: "Кейсы" },
-  { href: "/admin/site-ui", label: "Главная: банер и карточки" },
-  { href: "/admin/legal-docs", label: "Юридические документы" },
-  { href: "/admin/promos", label: "Промокоды" },
-  { href: "/admin/users", label: "Пользователи" },
-  { href: "/admin/beta", label: "Бета-доступ" },
-  { href: "/admin/deposits", label: "Пополнения" },
-  { href: "/admin/partners", label: "Партнёры" },
-  { href: "/admin/withdrawals", label: "Вывод Market.csgo" },
-  { href: "/admin/audit-logs", label: "Логи админов" },
-  { href: "/admin/support", label: "Обращения" },
-];
-
-function isActivePath(pathname: string, href: string) {
-  if (pathname === href) return true;
-  if (href === "/admin") return pathname === "/admin";
-  return pathname.startsWith(href + "/");
-}
 
 export function AdminDashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -60,6 +49,10 @@ export function AdminDashboardShell({ children }: { children: React.ReactNode })
   useEffect(() => {
     void load();
   }, [load]);
+
+  const [mainSectionOpen, setMainSectionOpen] = useState(false);
+  const [logsSectionOpen, setLogsSectionOpen] = useState(false);
+  const [partnerSectionOpen, setPartnerSectionOpen] = useState(false);
 
   const full = Boolean(me?.isAdmin);
   const supportOnly = Boolean(me && me.isSupportStaff && !me.isAdmin);
@@ -87,23 +80,161 @@ export function AdminDashboardShell({ children }: { children: React.ReactNode })
           className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4"
           aria-label="Разделы админки"
         >
-          {full &&
-            adminLinks.map(({ href, label }) => {
-              const active = isActivePath(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    active
+          {full && (
+            <>
+              <details
+                className="rounded-xl"
+                open={mainSectionOpen}
+                onToggle={(e) => setMainSectionOpen(e.currentTarget.open)}
+              >
+                <summary
+                  className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition [&::-webkit-details-marker]:hidden ${
+                    isUnderAdminMain(pathname)
                       ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
-                      : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                      : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-200"
                   }`}
                 >
-                  {label}
-                </Link>
-              );
-            })}
+                  <span>Основное</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${mainSectionOpen ? "rotate-180" : ""}`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </summary>
+                <div className="mt-0.5 space-y-0.5 border-l border-white/[0.08] pb-1 pl-3 ml-3">
+                  {adminNavMainLinks.map(({ href, label }) => {
+                    const active = isAdminPathActive(pathname, href);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
+                          active
+                            ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                        }`}
+                      >
+                        {label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+              <details
+                className="rounded-xl"
+                open={logsSectionOpen}
+                onToggle={(e) => setLogsSectionOpen(e.currentTarget.open)}
+              >
+                <summary
+                  className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition [&::-webkit-details-marker]:hidden ${
+                    isUnderAdminLogs(pathname)
+                      ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                      : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-200"
+                  }`}
+                >
+                  <span>Логи</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${logsSectionOpen ? "rotate-180" : ""}`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </summary>
+                <div className="mt-0.5 space-y-0.5 border-l border-white/[0.08] pb-1 pl-3 ml-3">
+                  {adminNavLogsLinks.map(({ href, label }) => {
+                    const active = isAdminPathActive(pathname, href);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
+                          active
+                            ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                        }`}
+                      >
+                        {label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+              <details
+                className="rounded-xl"
+                open={partnerSectionOpen}
+                onToggle={(e) => setPartnerSectionOpen(e.currentTarget.open)}
+              >
+                <summary
+                  className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition [&::-webkit-details-marker]:hidden ${
+                    isUnderAdminPartner(pathname)
+                      ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                      : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-200"
+                  }`}
+                >
+                  <span>Партнерка</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden
+                    className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${partnerSectionOpen ? "rotate-180" : ""}`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </summary>
+                <div className="mt-0.5 space-y-0.5 border-l border-white/[0.08] pb-1 pl-3 ml-3">
+                  {adminNavPartnerLinks.map(({ href, label }) => {
+                    const active = isAdminPathActive(pathname, href);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
+                          active
+                            ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                        }`}
+                      >
+                        {label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+              {adminNavRestLinks.map(({ href, label }) => {
+                const active = isAdminPathActive(pathname, href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      active
+                        ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.25)]"
+                        : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </>
+          )}
           {!full && (
             <Link
               href="/admin/support"
@@ -136,7 +267,7 @@ export function AdminDashboardShell({ children }: { children: React.ReactNode })
             href="/"
             className="block rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-center text-xs font-semibold text-zinc-300 transition hover:border-cb-flame/30 hover:text-white"
           >
-            На сайт
+            Вернуться на сайт
           </Link>
         </div>
       </aside>

@@ -34,12 +34,14 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
  * Таймаут на кожен запит — інакше при «мертвому» API екран «Загрузка…» не зникає нескінченно.
  */
 async function fetchPublicClosedBeta(): Promise<boolean | null> {
-  const urls: string[] = [`${apiBase}/api/beta/public-status`];
+  /** Спочатку той самий origin (Next проксує /api) — уникаємо CORS між localhost і 127.0.0.1:4000. */
+  const urls: string[] = [];
   if (typeof window !== "undefined") {
     const origin = window.location.origin.replace(/\/$/, "");
-    const abs = `${origin}/api/beta/public-status`;
-    if (!urls.includes(abs)) urls.push(abs);
+    urls.push(`${origin}/api/beta/public-status`);
   }
+  const direct = `${apiBase}/api/beta/public-status`;
+  if (!urls.includes(direct)) urls.push(direct);
   for (const url of urls) {
     try {
       const pr = await fetchWithTimeout(url, BETA_STATUS_FETCH_MS);
@@ -68,7 +70,8 @@ function isClosedBetaPublicPath(p: string | null | undefined) {
   return (
     Boolean(p?.startsWith("/auth/callback")) ||
     Boolean(p?.startsWith("/user/")) ||
-    Boolean(p?.startsWith("/legal/"))
+    Boolean(p?.startsWith("/legal/")) ||
+    Boolean(p?.startsWith("/embed/"))
   );
 }
 

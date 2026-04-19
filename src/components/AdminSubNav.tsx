@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
+import {
+  adminNavLogsLinks,
+  adminNavMainLinks,
+  adminNavPartnerLinks,
+  adminNavRestLinks,
+} from "@/config/adminNav";
 
 type MeSession = {
   isAdmin?: boolean;
@@ -36,7 +42,7 @@ export function AdminSubNav() {
   return (
     <>
       <Link href="/" className="text-zinc-500 hover:text-cb-flame">
-        ← На сайт
+        ← Вернуться на сайт
       </Link>
       <span className="text-zinc-700">|</span>
       <span
@@ -48,44 +54,43 @@ export function AdminSubNav() {
       </span>
       {full && (
         <>
-          <Link href="/admin/stats" className={linkClass}>
-            Статистика
-          </Link>
-          <Link href="/admin/cases" className={linkClass}>
-            Кейсы
-          </Link>
-          <Link href="/admin/site-ui" className={linkClass}>
-            Главная: банер и карточки
-          </Link>
-          <Link href="/admin/legal-docs" className={linkClass}>
-            Юридические документы
-          </Link>
-          <Link href="/admin/promos" className={linkClass}>
-            Промокоды
-          </Link>
-          <Link href="/admin/users" className={linkClass}>
-            Пользователи
-          </Link>
-          <Link href="/admin/beta" className={linkClass}>
-            Бета-доступ
-          </Link>
-          <Link href="/admin/deposits" className={linkClass}>
-            Пополнения
-          </Link>
-          <Link href="/admin/partners" className={linkClass}>
-            Партнёры
-          </Link>
-          <Link href="/admin/withdrawals" className={linkClass}>
-            Вывод Market.csgo
-          </Link>
-          <Link href="/admin/audit-logs" className={linkClass}>
-            Логи админов
-          </Link>
+          <span className="text-zinc-600">Основное:</span>
+          {adminNavMainLinks.map(({ href, label }) => (
+            <Link key={href} href={href} className={linkClass}>
+              {label}
+            </Link>
+          ))}
+          <span className="text-zinc-700">|</span>
+          <span className="text-zinc-600">Логи:</span>
+          {adminNavLogsLinks.map(({ href, label }) => (
+            <Link key={href} href={href} className={linkClass}>
+              {label}
+            </Link>
+          ))}
+          <span className="text-zinc-700">|</span>
+          <span className="text-zinc-600">Партнерка:</span>
+          {adminNavPartnerLinks.map(({ href, label }) => (
+            <Link key={href} href={href} className={linkClass}>
+              {label}
+            </Link>
+          ))}
+          {adminNavRestLinks.length > 0 ? (
+            <>
+              <span className="text-zinc-700">|</span>
+              {adminNavRestLinks.map(({ href, label }) => (
+                <Link key={href} href={href} className={linkClass}>
+                  {label}
+                </Link>
+              ))}
+            </>
+          ) : null}
         </>
       )}
-      <Link href="/admin/support" className="text-sky-300/90 hover:text-sky-200">
-        Обращения
-      </Link>
+      {!full && (
+        <Link href="/admin/support" className="text-sky-300/90 hover:text-sky-200">
+          Обращения
+        </Link>
+      )}
     </>
   );
 }

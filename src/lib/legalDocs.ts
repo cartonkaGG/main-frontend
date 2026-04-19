@@ -1,4 +1,4 @@
-import { apiBase } from "@/lib/api";
+import { joinApiUrl } from "@/lib/api";
 
 export type LegalDocsMeta = {
   terms: { version: number; title: string };
@@ -8,7 +8,7 @@ export type LegalDocsMeta = {
 
 export async function fetchLegalDocsMeta(): Promise<LegalDocsMeta | null> {
   try {
-    const res = await fetch(`${apiBase}/api/legal-docs`, { credentials: "include" });
+    const res = await fetch(joinApiUrl("/api/legal-docs"), { credentials: "include" });
     if (!res.ok) return null;
     return (await res.json()) as LegalDocsMeta;
   } catch {

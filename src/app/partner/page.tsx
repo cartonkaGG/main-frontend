@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { PartnerFaqAccordion } from "@/components/PartnerFaqAccordion";
+import { PartnerMaterialBanner } from "@/components/PartnerMaterialBanner";
+import { PartnerMaterialBannerShare } from "@/components/PartnerMaterialBannerShare";
 import { SiteMoney } from "@/components/SiteMoney";
 import { usePartnerCabinetTab } from "@/contexts/PartnerCabinetTabContext";
 
@@ -10,6 +13,8 @@ type Dash = {
     id: string;
     percentBps: number;
     percentDisplay: string;
+    /** Рівень партнерки / рефералки (поки всім 0). */
+    level: number;
     totalEarnedConfirmedRub: number;
     totalEarnedPendingRub: number;
     totalPaidOutRub: number;
@@ -54,21 +59,6 @@ function daysAgo(n: number) {
   return { from: ymd(from), to: ymd(to) };
 }
 
-function earningStatusRu(status: string) {
-  switch (status) {
-    case "pending":
-      return "ожидает";
-    case "credited":
-      return "зачислено";
-    case "confirmed":
-      return "архив";
-    case "void":
-      return "отменено";
-    default:
-      return status;
-  }
-}
-
 function periodLabel(from: string, to: string): string {
   if (!from && !to) return "За всё время";
   if (from && to) {
@@ -82,36 +72,8 @@ function periodLabel(from: string, to: string): string {
   return `${from || "…"} — ${to || "…"}`;
 }
 
-/** Единый блок раздела: заголовок, описание, контент. */
-function SectionShell({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id?: string;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      id={id}
-      className="rounded-2xl border border-white/[0.08] bg-[#0c0c0c]/95 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-6"
-    >
-      <header className="mb-5 border-b border-white/[0.06] pb-4">
-        <h2 className="text-sm font-black uppercase tracking-[0.12em] text-white">{title}</h2>
-        {description ? (
-          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-zinc-500">{description}</p>
-        ) : null}
-      </header>
-      {children}
-    </section>
-  );
-}
-
 export default function PartnerDashboardPage() {
-  const { tab, setTab } = usePartnerCabinetTab();
+  const { tab } = usePartnerCabinetTab();
   const [data, setData] = useState<Dash | null>(null);
   const [period, setPeriod] = useState(() => daysAgo(30));
   const [preset, setPreset] = useState<"7" | "30" | "90" | "all">("30");
@@ -169,6 +131,14 @@ export default function PartnerDashboardPage() {
     return m;
   }, [stats?.series]);
 
+  /** Промокод для баннера «Материал»: перший активный или любой первый из списка. */
+  const materialPartnerPromoCode = useMemo(() => {
+    const list = data?.codes ?? [];
+    const picked = list.find((c) => c.active) ?? list[0];
+    const raw = picked?.code?.trim();
+    return raw && raw.length > 0 ? raw : null;
+  }, [data?.codes]);
+
   const onPreset = (v: "7" | "30" | "90" | "all") => {
     setPreset(v);
     if (v === "all") setPeriod({ from: "", to: "" });
@@ -204,6 +174,9 @@ export default function PartnerDashboardPage() {
             <p className="mt-2 text-sm text-zinc-500">
               Показатели в реальном времени · ID:{" "}
               <span className="font-mono text-zinc-400">{shortId}</span>
+              {" · "}
+              уровень{" "}
+              <span className="font-mono text-zinc-300">{p.level ?? 0}</span>
               {" · "}
               ставка{" "}
               <span className="font-mono text-cb-flame/95">{p.percentDisplay}%</span> от чистой базы депозита
@@ -356,185 +329,20 @@ export default function PartnerDashboardPage() {
       </div>
       ) : null}
 
-      {tab === "codes" ? (
-      <SectionShell
-        title="Коды и промо"
-        description="Реферальные коды для поля «промокод» при пополнении. Бонус к сумме депозита задаёт администратор."
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          {data.codes?.length ? (
-            data.codes.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-xl border border-white/[0.08] bg-gradient-to-br from-[#141414] to-[#0a0a0a] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-lg font-bold tracking-tight text-white">{c.code}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                      c.active ? "bg-cb-flame/15 text-cb-flame" : "bg-zinc-800 text-zinc-500"
-                    }`}
-                  >
-                    {c.active ? "активен" : "выкл."}
-                  </span>
-                </div>
-                {c.label ? <p className="mt-2 text-xs text-zinc-500">{c.label}</p> : null}
-                {(c.depositBonusPercent ?? 0) > 0 ? (
-                  <p className="mt-2 text-xs text-zinc-400">
-                    Бонус к депозиту:{" "}
-                    <span className="font-mono text-cb-flame/90">{c.depositBonusPercent}%</span>
-                  </p>
-                ) : (
-                  <p className="mt-2 text-[11px] text-zinc-600">Без бонуса к депозиту по этому коду</p>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-zinc-500">Коды выдаёт администратор.</p>
-          )}
-        </div>
-      </SectionShell>
-      ) : null}
-
-      {tab === "finances" ? (
-      <SectionShell
-        title="Финансы"
-        description="Суммы по дням за выбранный период. Период дат задаётся на вкладке «Аналитика»."
-      >
-        <p className="mb-4 text-xs text-zinc-500">
-          Текущий диапазон:{" "}
-          <span className="font-mono text-zinc-400">{periodLabel(period.from, period.to)}</span>.{" "}
-          <button
-            type="button"
-            onClick={() => setTab("analytics")}
-            className="text-cb-flame/95 underline-offset-2 hover:underline"
-          >
-            Изменить на вкладке «Аналитика»
-          </button>
-        </p>
-        {stats ? (
-          <div className="overflow-x-auto rounded-xl border border-white/[0.05] bg-[#111]/60">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-zinc-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">День</th>
-                  <th className="px-4 py-3 text-right">Начисления</th>
-                  <th className="px-4 py-3 text-right">Нетто</th>
-                  <th className="px-4 py-3 text-right">События</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {stats.series.length ? (
-                  stats.series.map((row) => (
-                    <tr key={row.day}>
-                      <td className="px-4 py-2.5 font-mono text-zinc-400">{row.day}</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-cb-flame">
-                        <SiteMoney value={row.rewardRub} className="inline" />
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-zinc-400">
-                        <SiteMoney value={row.netDepositRub} className="inline" />
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-zinc-500">{row.count}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-zinc-600">
-                      Нет строк за период
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-zinc-600">
-            Загрузите данные — сначала откройте вкладку «Аналитика» и выберите период.
-          </p>
-        )}
-      </SectionShell>
-      ) : null}
-
-      {tab === "reports" ? (
-      <SectionShell
-        title="Отчёты"
-        description="Две таблицы: последние операции (до 80 записей) и детализация по выбранному периоду (до 500 строк)."
-      >
-        <div className="space-y-8">
+      {tab === "material" ? (
+        <div className="space-y-4">
           <div>
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
-              Последние начисления
-            </h3>
-            <div className="overflow-x-auto rounded-xl border border-white/[0.05] bg-[#111]/60">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-zinc-500">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Дата</th>
-                    <th className="px-4 py-3 text-right">Нетто ₽</th>
-                    <th className="px-4 py-3 text-right">%</th>
-                    <th className="px-4 py-3 text-right">Начисление</th>
-                    <th className="px-4 py-3 text-left">Статус</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  {(data.earnings || []).map((e) => (
-                    <tr key={e.id} className="hover:bg-white/[0.02]">
-                      <td className="px-4 py-2.5 text-zinc-500">
-                        {e.at ? new Date(e.at).toLocaleString("ru-RU") : "—"}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-zinc-300">{e.netDepositRub}</td>
-                      <td className="px-4 py-2.5 text-right text-zinc-400">{(e.percentBps / 100).toFixed(2)}%</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-cb-flame">{e.rewardRub} ₽</td>
-                      <td className="px-4 py-2.5 text-xs text-zinc-500">{earningStatusRu(e.status)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!(data.earnings || []).length ? (
-              <p className="mt-3 text-xs text-zinc-600">Пока нет записей.</p>
-            ) : null}
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Материал</h1>
+            <p className="mt-2 text-sm text-zinc-500">
+              Баннер и материалы для продвижения StormBattle — можно размещать на стримах и в соцсетях.
+            </p>
           </div>
-
-          {stats && stats.earnings.length > 0 ? (
-            <div>
-              <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-zinc-400">
-                Начисления за выбранный период
-              </h3>
-              <div className="overflow-x-auto rounded-xl border border-white/[0.05] bg-[#111]/60">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-zinc-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left">Дата</th>
-                      <th className="px-4 py-3 text-right">Нетто ₽</th>
-                      <th className="px-4 py-3 text-right">%</th>
-                      <th className="px-4 py-3 text-right">Начисление</th>
-                      <th className="px-4 py-3 text-left">Статус</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
-                    {stats.earnings.map((e) => (
-                      <tr key={e.id} className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-2.5 text-zinc-500">
-                          {e.at ? new Date(e.at).toLocaleString("ru-RU") : "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-zinc-300">{e.netDepositRub}</td>
-                        <td className="px-4 py-2.5 text-right text-zinc-400">{(e.percentBps / 100).toFixed(2)}%</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-cb-flame">{e.rewardRub} ₽</td>
-                        <td className="px-4 py-2.5 text-xs text-zinc-500">{earningStatusRu(e.status)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {stats.earnings.length >= 500 ? (
-                <p className="mt-3 text-xs text-zinc-600">Показано до 500 записей за период.</p>
-              ) : null}
-            </div>
-          ) : null}
+          <PartnerMaterialBannerShare partnerPromoCode={materialPartnerPromoCode} />
+          <PartnerMaterialBanner partnerPromoCode={materialPartnerPromoCode} />
         </div>
-      </SectionShell>
       ) : null}
+
+      {tab === "faq" ? <PartnerFaqAccordion /> : null}
     </div>
   );
 }

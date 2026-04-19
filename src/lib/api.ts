@@ -1,9 +1,79 @@
 import { requestAuthModal } from "@/lib/authModal";
 
-const base = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4000").replace(
-  /\/$/,
-  ""
-);
+function isLocalFrontendUrl(url: string): boolean {
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `http://${url}`);
+    return (
+      (u.hostname === "localhost" || u.hostname === "127.0.0.1") &&
+      (u.port === "3000" || u.port === "")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Локальний API на :4000 — з браузера краще бити в /api на Next (той самий origin), інакше cookies/CORS між localhost і 127.0.0.1 ламаються. */
+function isLocalLoopbackApiPort4000(url: string): boolean {
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `http://${url}`);
+    const h = u.hostname.toLowerCase();
+    if (h !== "localhost" && h !== "127.0.0.1") return false;
+    return u.port === "4000";
+  } catch {
+    return false;
+  }
+}
+
+/** База для fetch на сервері (RSC тощо) — завжди абсолютний URL бекенду. */
+function getServerApiPrefix(): string {
+  const a = process.env.API_INTERNAL_URL?.trim().replace(/\/$/, "");
+  const b = process.env.BACKEND_PROXY_URL?.trim().replace(/\/$/, "");
+  if (a) return a;
+  if (b) return b;
+  const pub = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  if (pub && !isLocalFrontendUrl(pub)) return pub;
+  return "http://127.0.0.1:4000";
+}
+
+/**
+ * База для fetch у браузері: порожній рядок = той самий origin (Next проксує /api/* на бекенд через app/api/[...path]/route.ts).
+ * Якщо задано зовнішній API (інший origin) — повний URL.
+ */
+function getBrowserApiPrefix(): string {
+  const env = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  if (!env) return "";
+  if (isLocalLoopbackApiPort4000(env)) return "";
+  try {
+    if (new URL(env).origin === window.location.origin) return "";
+  } catch {
+    return env || "http://127.0.0.1:4000";
+  }
+  return env;
+}
+
+function getFetchPrefix(): string {
+  return typeof window === "undefined" ? getServerApiPrefix() : getBrowserApiPrefix();
+}
+
+/** Повний URL або відносний шлях до API (у браузері — через /api проксі Next, коли prefix порожній). */
+export function joinApiUrl(path: string): string {
+  const prefix = getFetchPrefix();
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (!prefix) return p;
+  return `${prefix}${p}`;
+}
+
+/**
+ * Публічна адреса бекенду для Socket.IO, прямих fetch зі сирими URL тощо.
+ * Якщо NEXT_PUBLIC_API_URL вказує на фронт (:3000) — підставляємо локальний :4000.
+ */
+function getPublicBackendUrl(): string {
+  const env = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  if (!env || isLocalFrontendUrl(env)) return "http://127.0.0.1:4000";
+  return env;
+}
+
+export const apiBase = getPublicBackendUrl();
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -35,7 +105,7 @@ export async function apiFetch<T>(
 }> {
   const token = typeof window !== "undefined" ? getToken() : null;
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(joinApiUrl(path), {
       ...init,
       headers: {
         ...(init?.headers as Record<string, string> | undefined),
@@ -75,7 +145,7 @@ export async function apiFetch<T>(
 }
 
 export function steamLoginUrl() {
-  return `${base}/api/auth/steam`;
+  return joinApiUrl("/api/auth/steam");
 }
 
 /** Якщо порожньо — капча на клієнті вимкнена (локально без Turnstile). */
@@ -109,7 +179,7 @@ export async function postLegalAccept(payload: {
   cookiesVersion: number;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(`${base}/api/auth/legal-accept`, {
+    const res = await fetch(joinApiUrl("/api/auth/legal-accept"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -136,7 +206,7 @@ export async function postLoginCaptcha(turnstileToken: string): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${base}/api/auth/login-captcha`, {
+    const res = await fetch(joinApiUrl("/api/auth/login-captcha"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: turnstileToken }),
@@ -157,5 +227,3 @@ export async function postLoginCaptcha(turnstileToken: string): Promise<{
     return { ok: false, error: "Нет связи с API" };
   }
 }
-
-export { base as apiBase };

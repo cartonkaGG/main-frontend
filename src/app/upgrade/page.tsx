@@ -1006,6 +1006,26 @@ export default function UpgradePage() {
     [spinning, quickPickBusy, inputSum, stakeTotal, useServerEligible, validTargets],
   );
 
+  /** Ціль з каталогу або з відповіді eligible — інакше при порожньому/повільному /catalog прев’ю ламається. */
+  const target = useMemo(() => {
+    if (!targetId) return undefined;
+    return (
+      catalog.find((t) => t.id === targetId) ||
+      eligibleItems?.find((t) => t.id === targetId) ||
+      undefined
+    );
+  }, [targetId, catalog, eligibleItems]);
+
+  const fairArcPct = useMemo(
+    () => fairArcPctFromStakeAndTarget(stakeTotal, target?.price ?? 0),
+    [stakeTotal, target?.price],
+  );
+
+  const selectedItems = useMemo(
+    () => inventory.filter((i) => selected.has(i.itemId)),
+    [inventory, selected],
+  );
+
   function toggleSel(id: string) {
     if (spinning) return;
     const row = inventory.find((x) => x.itemId === id);
@@ -1094,16 +1114,6 @@ export default function UpgradePage() {
       })();
     }, UPGRADE_SPIN_DURATION_MS);
   }
-
-  const target = catalog.find((t) => t.id === targetId);
-  const fairArcPct = useMemo(
-    () => fairArcPctFromStakeAndTarget(stakeTotal, target?.price ?? 0),
-    [stakeTotal, target?.price],
-  );
-  const selectedItems = useMemo(
-    () => inventory.filter((i) => selected.has(i.itemId)),
-    [inventory, selected],
-  );
 
   return (
     <SiteShell>

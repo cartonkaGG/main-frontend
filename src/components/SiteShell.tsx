@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
@@ -262,9 +263,18 @@ export function SiteShell({ children }: Props) {
             <button
               type="button"
               onClick={() => requestSteamLoginRedirect()}
-              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-gradient-to-r from-red-700 to-cb-flame px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-900/30 hover:brightness-110 active:brightness-95"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-gradient-to-r from-red-700 to-cb-flame px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-900/30 hover:brightness-110 active:brightness-95"
+              aria-label="Войти через Steam"
+              title="Войти через Steam"
             >
-              Steam
+              <Image
+                src="/brand/steam-mark.png"
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain drop-shadow"
+                unoptimized
+              />
             </button>
           )}
         </div>
@@ -316,7 +326,9 @@ export function SiteShell({ children }: Props) {
         onSuccess={() => setCryptoTopUpOpen(false)}
       />
       <LegalAcceptanceRequiredModal
-        open={Boolean(hasBrowserToken && needsLegalAcceptance)}
+        open={Boolean(
+          hasBrowserToken && needsLegalAcceptance && !pathname.startsWith("/admin"),
+        )}
         onCompleted={() => void loadMe()}
       />
       <SupportFabLink />

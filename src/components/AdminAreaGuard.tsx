@@ -4,19 +4,30 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch, getToken } from "@/lib/api";
 
+const ADMIN_SESSION_MS = 15_000;
+
 export function AdminAreaGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [state, setState] = useState<"load" | "ok" | "no">("load");
 
   useEffect(() => {
+    setState("load");
     if (!getToken()) {
       router.replace("/");
       return;
     }
     let cancelled = false;
     (async () => {
-      const r = await apiFetch<{ isAdmin?: boolean; isSupportStaff?: boolean }>("/api/me/session");
+      const r = await Promise.race([
+        apiFetch<{ isAdmin?: boolean; isSupportStaff?: boolean }>("/api/me/session"),
+        new Promise<{ ok: false; status: number; error: string }>((resolve) =>
+          setTimeout(
+            () => resolve({ ok: false, status: 0, error: "Таймаут соединения с сервером" }),
+            ADMIN_SESSION_MS,
+          ),
+        ),
+      ]);
       if (cancelled) return;
       if (!r.ok || !r.data) {
         setState("no");

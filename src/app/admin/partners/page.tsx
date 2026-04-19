@@ -48,6 +48,7 @@ type CabinetDash = {
     id: string;
     percentBps: number;
     percentDisplay: string;
+    level?: number;
     active: boolean;
     totalEarnedConfirmedRub: number;
     totalEarnedPendingRub: number;

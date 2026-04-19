@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { apiBase, getToken } from "@/lib/api";
+import { getToken, joinApiUrl } from "@/lib/api";
 import { prepareImageForImgbbUpload } from "@/lib/prepareImageForUpload";
 
 type Props = {
@@ -46,9 +46,7 @@ export function ImgbbUploadButton({
       setLocalErr(null);
       try {
         const imageBase64 = await prepareImageForImgbbUpload(file);
-        const res = await fetch(
-          `${apiBase}/api/admin/imgbb/upload`,
-          {
+        const res = await fetch(joinApiUrl("/api/admin/imgbb/upload"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -59,8 +57,7 @@ export function ImgbbUploadButton({
               imageBase64,
               name: `${nameHint}-${file.name.replace(/[^\w.-]/g, "_").slice(0, 40)}`,
             }),
-          }
-        );
+          });
         const text = await res.text();
         let data: { url?: string; error?: string } = {};
         try {

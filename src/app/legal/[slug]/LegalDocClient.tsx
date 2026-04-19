@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/SiteShell";
-import { apiBase } from "@/lib/api";
+import { joinApiUrl } from "@/lib/api";
 import type { LegalSlug } from "@/lib/legalDocs";
 
 type DocPayload = {
@@ -23,7 +23,7 @@ export function LegalDocClient({ slug }: { slug: LegalSlug }) {
       setErr(null);
       setDoc(null);
       try {
-        const res = await fetch(`${apiBase}/api/legal-docs/${encodeURIComponent(slug)}`, {
+        const res = await fetch(joinApiUrl(`/api/legal-docs/${encodeURIComponent(slug)}`), {
           credentials: "include",
         });
         const text = await res.text();

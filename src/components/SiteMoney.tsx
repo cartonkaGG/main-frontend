@@ -1,6 +1,6 @@
 "use client";
 
-import { RoundedZapIcon } from "@/components/icons/RoundedZapIcon";
+import { StormCoinSymbol } from "@/components/StormCoinSymbol";
 import { formatRub, formatRubSpaced } from "@/lib/money";
 
 export function SiteMoney({
@@ -8,23 +8,29 @@ export function SiteMoney({
   spaced,
   className = "",
   iconClassName,
+  hideIcon,
 }: {
   value: number | null | undefined;
   spaced?: boolean;
   className?: string;
-  /** За замовч. компактна іконка ~1em, колір успадковує текст (`text-current`). */
+  /** Додаткові класи для іконки storm-coin (розмір, відступи); заливка всередині SVG. */
   iconClassName?: string;
+  /** Без іконки storm-coin (наприклад, якщо поруч своя іконка гаманця). */
+  hideIcon?: boolean;
 }) {
   const s = spaced ? formatRubSpaced(value) : formatRub(value);
   return (
-    <span className={`inline-flex items-center gap-0.5 font-mono ${className}`.trim()}>
+    <span className={`inline-flex items-center gap-1 font-mono ${className}`.trim()}>
       <span className="tabular-nums">{s}</span>
-      <RoundedZapIcon
-        className={
-          iconClassName ??
-          "h-[1em] w-[1em] max-h-[1.15em] max-w-[1.15em] shrink-0 text-current opacity-95"
-        }
-      />
+      {hideIcon ? null : (
+        <StormCoinSymbol
+          className={
+            iconClassName ??
+            "h-[1em] w-[1em] max-h-[1.2em] max-w-[1.2em] shrink-0 align-[-0.12em]"
+          }
+          title="storm-coin"
+        />
+      )}
     </span>
   );
 }
