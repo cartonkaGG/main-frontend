@@ -27,7 +27,6 @@ const PARTNER_LEVEL_REWARDS: PartnerLevelReward[] = [
   { level: 5, repeatDepositBonusPercent: 30, referralsFrom: 2500, rewardCoins: 1000 },
 ];
 
-const MAX_REFERRALS_SCALE = 2500;
 function levelFromReferrals(referralsCount: number) {
   let level = 1;
   for (const row of PARTNER_LEVEL_REWARDS) {

@@ -62,27 +62,12 @@ function daysAgo(n: number) {
   return { from: ymd(from), to: ymd(to) };
 }
 
-function periodLabel(from: string, to: string): string {
-  if (!from && !to) return "За всё время";
-  if (from && to) {
-    const a = new Date(from);
-    const b = new Date(to);
-    const diff = Math.round((b.getTime() - a.getTime()) / 86400000);
-    if (diff <= 8) return "Последние 7 дней";
-    if (diff <= 32) return "Последние 30 дней";
-    if (diff <= 95) return "Последние 90 дней";
-  }
-  return `${from || "…"} — ${to || "…"}`;
-}
-
 export default function PartnerDashboardPage() {
   const { tab } = usePartnerCabinetTab();
   const [data, setData] = useState<Dash | null>(null);
   const [period, setPeriod] = useState(() => daysAgo(30));
   const [preset, setPreset] = useState<"7" | "30" | "90" | "all">("30");
-  const [stats, setStats] = useState<PeriodStats | null>(null);
   const [statsErr, setStatsErr] = useState<string | null>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -100,39 +85,20 @@ export default function PartnerDashboardPage() {
 
   const loadStats = useCallback(async (from: string, to: string) => {
     setStatsErr(null);
-    setLoadingStats(true);
     const qs = new URLSearchParams();
     if (from) qs.set("from", from);
     if (to) qs.set("to", to);
     const q = qs.toString();
     const r = await apiFetch<PeriodStats>(`/api/partner/stats${q ? `?${q}` : ""}`);
-    setLoadingStats(false);
     if (!r.ok) {
       setStatsErr(r.error || "Не удалось загрузить статистику");
-      setStats(null);
       return;
     }
-    setStats(r.data || null);
   }, []);
 
   useEffect(() => {
     void loadStats(period.from, period.to);
   }, [period.from, period.to, loadStats]);
-
-  const maxBar = useMemo(() => {
-    const s = stats?.series || [];
-    return Math.max(1, ...s.map((x) => x.rewardRub));
-  }, [stats?.series]);
-
-  const peakIdx = useMemo(() => {
-    const s = stats?.series || [];
-    if (!s.length) return -1;
-    let m = 0;
-    s.forEach((row, i) => {
-      if (row.rewardRub > s[m].rewardRub) m = i;
-    });
-    return m;
-  }, [stats?.series]);
 
   /** Промокод для баннера «Материал»: перший активный или любой первый из списка. */
   const materialPartnerPromoCode = useMemo(() => {

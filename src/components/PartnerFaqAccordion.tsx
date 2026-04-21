@@ -29,14 +29,6 @@ type PartnerMeLite = {
   } | null;
 };
 
-function levelFromReferrals(referralsCount: number) {
-  let level = 1;
-  for (const row of PARTNER_LEVEL_REWARDS) {
-    if (referralsCount >= row.referralsFrom) level = row.level;
-  }
-  return level;
-}
-
 function nextLevelTarget(currentLevel: number): number | null {
   const next = PARTNER_LEVEL_REWARDS.find((x) => x.level === currentLevel + 1);
   return next ? next.referralsFrom : null;
@@ -213,7 +205,6 @@ export function PartnerFaqAccordion({ showLevels = true }: { showLevels?: boolea
                   const isReached = effectiveReferralsCount >= reward.referralsFrom;
                   const isClaimed = claimedLevels.includes(reward.level);
                   const isShattered = isClaimed;
-                  const prevLevel = Math.max(1, reward.level - 1);
                   const isNextTargetCard =
                     reward.level === currentLevel + 1 &&
                     reward.level <= PARTNER_LEVEL_REWARDS.length;

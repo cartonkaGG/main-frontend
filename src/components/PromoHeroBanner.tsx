@@ -194,7 +194,7 @@ export function PromoHeroBanner({ hero }: Props) {
       : heroCfg.bgImageOverlay;
   const showImageBg =
     (slideBgRaw.length > 0 && !slideBgGradient) ||
-    (heroCfg.bgKind === "image" && heroCfg.bgImageUrl.trim().length > 0);
+    heroCfg.bgImageUrl.trim().length > 0;
   const bgImageUrl = slideBgRaw.length > 0 && !slideBgGradient ? slideBgRaw : heroCfg.bgImageUrl;
 
   const heroShellStyle = useMemo(() => {
