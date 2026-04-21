@@ -91,10 +91,13 @@ function SegmentedRing({
 export function PartnerLevelHudOrb({
   level,
   compact,
+  showUnit = true,
 }: {
   level: number;
   /** Компактний бейдж біля профілю (без підпису «ур.»). */
   compact?: boolean;
+  /** Показувати підпис «ур.» під орбом у великому варіанті. */
+  showUnit?: boolean;
 }) {
   const n = Math.min(5, Math.max(0, level));
   const t = LEVEL_THEMES[n];
@@ -180,7 +183,7 @@ export function PartnerLevelHudOrb({
           </text>
         </svg>
       </div>
-      {!compact ? (
+      {!compact && showUnit ? (
         <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 sm:text-[12px]">
           ур.
         </span>

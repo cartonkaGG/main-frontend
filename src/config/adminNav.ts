@@ -4,7 +4,7 @@ export type AdminNavLink = { href: string; label: string };
 export const adminNavMainLinks: AdminNavLink[] = [
   { href: "/admin/stats", label: "Статистика" },
   { href: "/admin/cases", label: "Кейсы" },
-  { href: "/admin/site-ui", label: "Главная: банер и карточки" },
+  { href: "/admin/slides", label: "Слайдер главной" },
   { href: "/admin/users", label: "Пользователи" },
 ];
 
@@ -21,7 +21,7 @@ export const adminNavLogsLinks: AdminNavLink[] = [
 /** Раздел «Партнерка» */
 export const adminNavPartnerLinks: AdminNavLink[] = [
   { href: "/admin/promos", label: "Промокоды" },
-  { href: "/admin/partners", label: "Партнёрская программа" },
+  { href: "/admin/partners", label: "Партнёры" },
   { href: "/admin/partner-faq", label: "F.A.Q партнеров" },
 ];
 

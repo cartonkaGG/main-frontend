@@ -13,6 +13,7 @@ export function GlobalLegalFooter() {
   const linkClass =
     "text-right text-sm text-zinc-400 transition hover:text-cb-flame hover:underline underline-offset-2";
   const showSupport = !pathname.startsWith("/support");
+  const showPartner = !pathname.startsWith("/partner");
 
   return (
     <footer
@@ -55,6 +56,24 @@ export function GlobalLegalFooter() {
                 </svg>
               </span>
               Поддержка
+            </Link>
+          ) : null}
+          {showPartner ? (
+            <Link
+              href="/partner?tab=analytics"
+              className="inline-flex w-fit items-center gap-2 text-sm font-medium text-emerald-400/95 underline-offset-2 transition hover:text-emerald-300 hover:underline"
+            >
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-500/35 bg-emerald-950/40 text-emerald-200"
+                aria-hidden
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-emerald-300">
+                  <path d="M12 3 4 7l8 4 8-4-8-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M4 12l8 4 8-4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M4 17l8 4 8-4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                </svg>
+              </span>
+              Партнерская программа
             </Link>
           ) : null}
         </div>

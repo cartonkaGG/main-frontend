@@ -147,14 +147,22 @@ export function NavbarUserMenu({ me, variant = "site" }: Props) {
           >
             Профиль и инвентарь
           </Link>
+          <Link
+            href="/support"
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm text-sky-300/95 hover:bg-sky-950/30 hover:text-sky-200"
+            onClick={() => setMenuOpen(false)}
+          >
+            Поддержка
+          </Link>
           {me.isPartner && (
             <Link
-              href="/partner"
+              href="/partner?tab=analytics"
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-emerald-300/95 hover:bg-emerald-950/25 hover:text-emerald-200"
               onClick={() => setMenuOpen(false)}
             >
-              Партнёрский кабинет
+              Партнерская программа
             </Link>
           )}
           {me.isSupportStaff && !me.isAdmin && (

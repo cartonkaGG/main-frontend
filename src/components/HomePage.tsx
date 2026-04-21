@@ -7,11 +7,6 @@ import { PromoHeroBanner } from "@/components/PromoHeroBanner";
 import { SiteShell } from "@/components/SiteShell";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/categories";
 import { apiFetch } from "@/lib/api";
-import {
-  DEFAULT_HOME_PROMO_HERO,
-  mergeHomePromoHero,
-  type SiteUiPublic,
-} from "@/lib/siteUi";
 
 /** Скільки перших карток у сітці отримують preload / важчі прев’ю (LCP і верх каталогу). */
 const HOME_CARD_IMAGE_PRELOAD = 10;
@@ -19,27 +14,11 @@ const HOME_CARD_IMAGE_PRELOAD = 10;
 type Props = {
   /** З SSR: каталог уже в HTML, картинки стартують одразу. undefined — з клієнта підвантажити /api/cases */
   initialCases?: CaseSummary[];
-  initialSiteUi?: Partial<SiteUiPublic>;
 };
 
-export function HomePage({ initialCases, initialSiteUi }: Props) {
+export function HomePage({ initialCases }: Props) {
   const [cases, setCases] = useState<CaseSummary[]>(() => initialCases ?? []);
   const [error, setError] = useState<string | null>(null);
-  const [siteUi, setSiteUi] = useState<SiteUiPublic>(() => ({
-    homeCaseImageScale:
-      typeof initialSiteUi?.homeCaseImageScale === "number" &&
-      Number.isFinite(initialSiteUi.homeCaseImageScale)
-        ? initialSiteUi.homeCaseImageScale
-        : 100,
-    homeSkinImageScale:
-      typeof initialSiteUi?.homeSkinImageScale === "number" &&
-      Number.isFinite(initialSiteUi.homeSkinImageScale)
-        ? initialSiteUi.homeSkinImageScale
-        : 100,
-    homePromoHero: mergeHomePromoHero(initialSiteUi?.homePromoHero ?? DEFAULT_HOME_PROMO_HERO),
-  }));
-  /** Если /api/site-ui недоступен (часто — не перезапущен backend), пользователь остаётся на 100%. */
-  const [siteUiLoadIssue, setSiteUiLoadIssue] = useState<string | null>(null);
 
   const loadCases = useCallback(async () => {
     const r = await apiFetch<{ cases: CaseSummary[] }>("/api/cases");
@@ -51,55 +30,15 @@ export function HomePage({ initialCases, initialSiteUi }: Props) {
     setError(null);
   }, []);
 
-  const loadSiteUi = useCallback(async () => {
-    const r = await apiFetch<SiteUiPublic>("/api/site-ui");
-    if (r.ok && r.data) {
-      const d = r.data;
-      const homeCaseImageScale =
-        typeof d.homeCaseImageScale === "number" && Number.isFinite(d.homeCaseImageScale)
-          ? d.homeCaseImageScale
-          : 100;
-      const homeSkinImageScale =
-        typeof d.homeSkinImageScale === "number" && Number.isFinite(d.homeSkinImageScale)
-          ? d.homeSkinImageScale
-          : 100;
-      const homePromoHero = mergeHomePromoHero(d.homePromoHero);
-      setSiteUi({ homeCaseImageScale, homeSkinImageScale, homePromoHero });
-      setSiteUiLoadIssue(null);
-      return;
-    }
-    const hint =
-      r.status === 404
-        ? "API без маршрута /api/site-ui — остановите старый процесс Node и перезапустите backend из актуального кода (npm run dev из корня репозитория)."
-        : r.error || "Нет связи с API";
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[StormBattle] Масштаб карточек на главной остаётся 100%:", hint);
-    }
-    setSiteUiLoadIssue(
-      r.status === 404
-        ? "Масштаб карточек на главной не применён (404 /api/site-ui). Перезапустите backend из актуального кода."
-        : process.env.NODE_ENV === "development"
-          ? hint
-          : null,
-    );
-  }, []);
-
   useEffect(() => {
     if (initialCases === undefined) void loadCases();
-    if (initialSiteUi === undefined) void loadSiteUi();
-  }, [initialCases, initialSiteUi, loadCases, loadSiteUi]);
+  }, [initialCases, loadCases]);
 
   useEffect(() => {
     const h = () => loadCases();
     window.addEventListener("cd-cases-updated", h);
     return () => window.removeEventListener("cd-cases-updated", h);
   }, [loadCases]);
-
-  useEffect(() => {
-    const h = () => void loadSiteUi();
-    window.addEventListener("cd-site-ui-updated", h);
-    return () => window.removeEventListener("cd-site-ui-updated", h);
-  }, [loadSiteUi]);
 
   const featured = useMemo(() => {
     return cases
@@ -120,13 +59,7 @@ export function HomePage({ initialCases, initialSiteUi }: Props) {
 
   return (
     <SiteShell>
-      <PromoHeroBanner hero={siteUi.homePromoHero} />
-
-      {siteUiLoadIssue && (
-        <div className="border-b border-amber-500/35 bg-amber-950/40 px-4 py-2 text-center text-xs text-amber-200/95">
-          {siteUiLoadIssue}
-        </div>
-      )}
+      <PromoHeroBanner />
 
       {featured.length > 0 && (
         <section className="border-t border-cb-stroke/80 bg-black/25 px-3 py-8 sm:px-6 sm:py-14">
@@ -140,8 +73,8 @@ export function HomePage({ initialCases, initialSiteUi }: Props) {
                 <CaseCard
                   key={c.slug}
                   c={c}
-                  homeCaseScalePct={siteUi.homeCaseImageScale}
-                  homeSkinScalePct={siteUi.homeSkinImageScale}
+                  homeCaseScalePct={100}
+                  homeSkinScalePct={100}
                   preloadImages={i < HOME_CARD_IMAGE_PRELOAD}
                 />
               ))}
@@ -183,8 +116,8 @@ export function HomePage({ initialCases, initialSiteUi }: Props) {
                     <CaseCard
                       key={c.slug}
                       c={c}
-                      homeCaseScalePct={siteUi.homeCaseImageScale}
-                      homeSkinScalePct={siteUi.homeSkinImageScale}
+                      homeCaseScalePct={100}
+                      homeSkinScalePct={100}
                       preloadImages={i < HOME_CARD_IMAGE_PRELOAD}
                     />
                   ))}

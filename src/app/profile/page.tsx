@@ -12,6 +12,7 @@ import { requestAuthModal } from "@/lib/authModal";
 import { RoundedZapIcon } from "@/components/icons/RoundedZapIcon";
 import { SiteMoney } from "@/components/SiteMoney";
 import { SitePriceBadge } from "@/components/SitePriceBadge";
+import type { CaseSummary } from "@/components/CaseCard";
 import { formatSiteAmount } from "@/lib/money";
 import { SITE_MONEY_CTA_CLASS } from "@/lib/siteMoneyStyles";
 import { preferHighResSteamEconomyImage, SKIN_IMG_QUALITY_CLASS } from "@/lib/steamImage";
@@ -23,39 +24,6 @@ function splitItemName(item: string): { weapon: string; skin: string } {
   return {
     weapon: t.slice(0, idx).trim(),
     skin: t.slice(idx + 1).trim(),
-  };
-}
-
-const RANK_STEPS = [
-  "BRONZE I",
-  "BRONZE II",
-  "BRONZE III",
-  "SILVER I",
-  "SILVER II",
-  "GOLD I",
-  "GOLD II",
-  "PLATINUM",
-  "STORM",
-] as const;
-
-function profileRankFromStats(
-  st?: { casesOpened?: number; upgradesDone?: number; itemsSold?: number },
-) {
-  const cases = st?.casesOpened ?? 0;
-  const upg = st?.upgradesDone ?? 0;
-  const sold = st?.itemsSold ?? 0;
-  const xp = cases * 12 + upg * 20 + sold * 6;
-  const level = Math.min(99, Math.max(1, 1 + Math.floor(xp / 450)));
-  const inSegment = xp % 450;
-  const rankStep = Math.min(RANK_STEPS.length - 1, Math.floor(xp / 900));
-  const label = RANK_STEPS[rankStep];
-  return {
-    level,
-    label,
-    rankStep,
-    xpInSegment: inSegment,
-    xpSegment: 450,
-    xpTotal: xp,
   };
 }
 
@@ -177,6 +145,11 @@ type Me = {
     sellPrice: number;
     source?: "case" | "upgrade" | "inventory";
   };
+  favoriteCase?: {
+    slug: string;
+    name: string;
+    opens: number;
+  } | null;
 };
 
 type BestDrop = {
@@ -210,27 +183,66 @@ const rarityClass: Record<string, string> = {
   contraband: "border-orange-500/55 bg-orange-950/30 text-orange-200",
 };
 
+const rarityGlowClass: Record<string, string> = {
+  common: "drop-shadow-[0_0_14px_rgba(161,161,170,0.45)]",
+  uncommon: "drop-shadow-[0_0_18px_rgba(56,189,248,0.58)]",
+  rare: "drop-shadow-[0_0_20px_rgba(37,99,235,0.62)]",
+  epic: "drop-shadow-[0_0_20px_rgba(147,51,234,0.62)]",
+  legendary: "drop-shadow-[0_0_22px_rgba(251,191,36,0.68)]",
+  consumer: "drop-shadow-[0_0_14px_rgba(148,163,184,0.45)]",
+  industrial: "drop-shadow-[0_0_14px_rgba(100,116,139,0.45)]",
+  milspec: "drop-shadow-[0_0_20px_rgba(37,99,235,0.62)]",
+  "mil-spec": "drop-shadow-[0_0_20px_rgba(37,99,235,0.62)]",
+  restricted: "drop-shadow-[0_0_20px_rgba(124,58,237,0.62)]",
+  classified: "drop-shadow-[0_0_22px_rgba(192,38,211,0.66)]",
+  covert: "drop-shadow-[0_0_22px_rgba(220,38,38,0.66)]",
+  extraordinary: "drop-shadow-[0_0_22px_rgba(250,204,21,0.68)]",
+  contraband: "drop-shadow-[0_0_22px_rgba(251,191,36,0.68)]",
+};
+
+const rarityPanelClass: Record<string, string> = {
+  common: "bg-zinc-950/45 border-zinc-500/35",
+  uncommon: "bg-sky-950/35 border-sky-400/35",
+  rare: "bg-blue-950/35 border-blue-500/35",
+  epic: "bg-purple-950/35 border-purple-500/35",
+  legendary: "bg-amber-950/40 border-amber-400/40",
+  consumer: "bg-zinc-950/45 border-zinc-500/35",
+  industrial: "bg-slate-950/35 border-slate-500/35",
+  milspec: "bg-blue-950/35 border-blue-500/35",
+  "mil-spec": "bg-blue-950/35 border-blue-500/35",
+  restricted: "bg-violet-950/35 border-violet-500/35",
+  classified: "bg-fuchsia-950/35 border-fuchsia-500/35",
+  covert: "bg-red-950/40 border-red-500/40",
+  extraordinary: "bg-yellow-950/40 border-yellow-400/40",
+  contraband: "bg-orange-950/40 border-orange-400/40",
+};
+
+const caseAccentPanelClass: Record<string, string> = {
+  amber: "bg-red-950/35 border-red-400/35",
+  orange: "bg-orange-950/35 border-orange-400/35",
+  rose: "bg-rose-950/35 border-rose-400/35",
+  violet: "bg-violet-950/35 border-violet-400/35",
+  emerald: "bg-emerald-950/35 border-emerald-400/35",
+  cyan: "bg-cyan-950/35 border-cyan-400/35",
+  fuchsia: "bg-fuchsia-950/35 border-fuchsia-400/35",
+  yellow: "bg-amber-950/35 border-amber-400/35",
+  sky: "bg-sky-950/35 border-sky-400/35",
+};
+
+const caseAccentGlowClass: Record<string, string> = {
+  amber: "drop-shadow-[0_0_16px_rgba(248,113,113,0.5)]",
+  orange: "drop-shadow-[0_0_16px_rgba(251,146,60,0.5)]",
+  rose: "drop-shadow-[0_0_16px_rgba(251,113,133,0.5)]",
+  violet: "drop-shadow-[0_0_16px_rgba(167,139,250,0.5)]",
+  emerald: "drop-shadow-[0_0_16px_rgba(52,211,153,0.5)]",
+  cyan: "drop-shadow-[0_0_16px_rgba(34,211,238,0.5)]",
+  fuchsia: "drop-shadow-[0_0_16px_rgba(232,121,249,0.5)]",
+  yellow: "drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]",
+  sky: "drop-shadow-[0_0_16px_rgba(56,189,248,0.5)]",
+};
+
 const profileCard =
   "rounded-2xl border border-cb-stroke/60 bg-gradient-to-br from-[#0a0e14]/95 via-cb-panel/40 to-black/80 shadow-[inset_0_1px_0_rgba(255,49,49,0.07),0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-sm";
-
-function ProfileWalletIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <path d="M3 10h18" />
-      <path d="M16 14h2" />
-    </svg>
-  );
-}
 
 function ProfileLogoutIcon({ className }: { className?: string }) {
   return (
@@ -238,93 +250,6 @@ function ProfileLogoutIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H3m0 0l4-4m-4 4l4 4" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V5a2 2 0 012-2h9a2 2 0 012 2v14a2 2 0 01-2 2h-9a2 2 0 01-2-2v-2" />
     </svg>
-  );
-}
-
-/** Іконка рангу за кроком 0…RANK_STEPS.length-1 (відповідає `RANK_STEPS`). */
-function ProfileRankIcon({ rankStep, label }: { rankStep: number; label: string }) {
-  const s = Math.max(0, Math.min(RANK_STEPS.length - 1, rankStep));
-  const common = "h-5 w-5 shrink-0";
-  const glyph = (() => {
-    if (s <= 2) {
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M12 3l2.2 4.5L19 8.3l-3.5 3.4.8 4.9L12 14.9 7.7 16.6l.8-4.9L5 8.3l4.8-.8L12 3z"
-            className="fill-amber-700/90 stroke-amber-500/60"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    }
-    if (s <= 4) {
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M12 3l2.2 4.5L19 8.3l-3.5 3.4.8 4.9L12 14.9 7.7 16.6l.8-4.9L5 8.3l4.8-.8L12 3z"
-            className="fill-zinc-400/90 stroke-zinc-300/70"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    }
-    if (s <= 6) {
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M12 3l2.2 4.5L19 8.3l-3.5 3.4.8 4.9L12 14.9 7.7 16.6l.8-4.9L5 8.3l4.8-.8L12 3z"
-            className="fill-amber-400/95 stroke-amber-200/80"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    }
-    if (s === 7) {
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M12 2l2.5 5.5L20 9l-5 3 1.5 6.5L12 15.5 7.5 18.5 9 12 4 9l5.5-1.5L12 2z"
-            className="fill-cyan-400/85 stroke-cyan-200/70"
-            strokeWidth="1"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    }
-    return (
-      <svg className={common} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-          className="fill-cb-flame/95 stroke-orange-300/70"
-          strokeWidth="1"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  })();
-
-  const shell =
-    s <= 2
-      ? "border-amber-800/50 bg-amber-950/50"
-      : s <= 4
-        ? "border-zinc-500/45 bg-zinc-900/55"
-        : s <= 6
-          ? "border-amber-500/45 bg-amber-950/35"
-          : s === 7
-            ? "border-cyan-500/40 bg-cyan-950/35"
-            : "border-cb-flame/50 bg-red-950/40";
-
-  return (
-    <span
-      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ring-1 ring-black/30 ${shell}`}
-      title={label}
-    >
-      {glyph}
-      <span className="sr-only">{label}</span>
-    </span>
   );
 }
 
@@ -597,6 +522,9 @@ export default function ProfilePage() {
   const [invSort, setInvSort] = useState<"priceDesc" | "priceAsc" | "name">("priceDesc");
   const [invSearch, setInvSearch] = useState("");
   const [invActiveOnly, setInvActiveOnly] = useState(false);
+  const [caseMediaBySlug, setCaseMediaBySlug] = useState<
+    Record<string, { image: string | null; skinImage: string | null; accent: string | null }>
+  >({});
 
   /** Активні заявки з /api/withdrawals/mine — єдине джерело для «На выводе» / «Отменить», щоб не розходилось з /api/me. */
   const activeWithdrawalByItemId = useMemo(() => {
@@ -705,9 +633,10 @@ export default function ProfilePage() {
       setMyWithdrawals([]);
       return;
     }
-    const [rMe, rWd] = await Promise.all([
+    const [rMe, rWd, rCases] = await Promise.all([
       apiFetch<Me>("/api/me"),
       apiFetch<{ withdrawals: MyWithdrawalRow[] }>("/api/withdrawals/mine"),
+      apiFetch<{ cases: CaseSummary[] }>("/api/cases"),
     ]);
     if (!rMe.ok) {
       setErr(rMe.error || "Ошибка");
@@ -718,6 +647,18 @@ export default function ProfilePage() {
     setErr(null);
     setMe(rMe.data!);
     setMyWithdrawals(Array.isArray(rWd.data?.withdrawals) ? rWd.data!.withdrawals : []);
+    const cases = Array.isArray(rCases.data?.cases) ? rCases.data!.cases : [];
+    const nextCaseMediaBySlug: Record<string, { image: string | null; skinImage: string | null; accent: string | null }> = {};
+    for (const c of cases) {
+      const slug = String(c?.slug || "").trim();
+      if (!slug) continue;
+      nextCaseMediaBySlug[slug] = {
+        image: c?.image ?? null,
+        skinImage: c?.skinImage ?? null,
+        accent: c?.accent ?? null,
+      };
+    }
+    setCaseMediaBySlug(nextCaseMediaBySlug);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("cd-withdrawals-mine-changed"));
     }
@@ -785,12 +726,19 @@ export default function ProfilePage() {
         )
     : null;
 
-  const rankInfo = useMemo(() => profileRankFromStats(me?.stats), [me?.stats]);
-
-  const fullInventoryScValue = useMemo(
-    () => (me?.inventory ?? []).reduce((s, it) => s + displayItemRub(it), 0),
-    [me?.inventory],
-  );
+  const favoriteCaseCard = useMemo(() => {
+    const f = me?.favoriteCase;
+    if (!f?.slug) return null;
+    const media = caseMediaBySlug[f.slug];
+    return {
+      slug: f.slug,
+      name: String(f.name || f.slug),
+      opens: Number(f.opens) || 0,
+      image: media?.image ?? null,
+      skinImage: media?.skinImage ?? null,
+      accent: media?.accent ?? null,
+    };
+  }, [me?.favoriteCase, caseMediaBySlug]);
 
   const accountStats = useMemo(
     () =>
@@ -952,13 +900,6 @@ export default function ProfilePage() {
     window.dispatchEvent(new CustomEvent("cd-balance-updated"));
   }
 
-  const tradeUrlOk = tradeUrl.trim().length > 20;
-  const rankXpPct = Math.min(
-    100,
-    (rankInfo.xpInSegment / Math.max(1, rankInfo.xpSegment)) * 100,
-  );
-  const rankXpToNext = Math.max(0, rankInfo.xpSegment - rankInfo.xpInSegment);
-
   return (
     <SiteShell>
       <div className="relative mx-auto w-full max-w-[min(96rem,calc(100vw-1.5rem))] px-4 pb-20 pt-8 sm:px-6 sm:pb-24 sm:pt-10 lg:px-12">
@@ -982,182 +923,199 @@ export default function ProfilePage() {
 
             {me && (
               <>
-                <div className={`${profileCard} relative mb-8 overflow-hidden p-5 sm:p-6 lg:p-7`}>
-                  <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                      <div className="flex shrink-0 justify-center sm:justify-start">
-                        <div className="relative w-28 overflow-hidden rounded-2xl ring-2 ring-cb-flame/40 sm:w-32 xl:w-36">
+                <div className="mb-8 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className={`${profileCard} p-4 sm:p-5`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl ring-1 ring-cb-stroke/60">
                           {me.avatar ? (
                             <Image
                               src={me.avatar}
                               alt=""
-                              width={144}
-                              height={144}
-                              className="aspect-square h-auto w-full object-cover"
+                              width={56}
+                              height={56}
+                              className="h-full w-full object-cover"
                               unoptimized
                             />
                           ) : (
-                            <div className="flex aspect-square w-full items-center justify-center bg-zinc-900 text-3xl text-zinc-600">
+                            <div className="flex h-full w-full items-center justify-center bg-zinc-900 text-lg text-zinc-600">
                               ?
                             </div>
                           )}
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/75 to-transparent px-2 pb-2 pt-8 text-center">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-white/95">
-                              {rankInfo.level} уровень
-                            </p>
-                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="truncate text-2xl font-black text-white">{me.displayName}</h2>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-zinc-500">ID: {me.steamId || "—"}</p>
                         </div>
                       </div>
-
-                      <div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <h2 className="truncate text-xl font-black text-white sm:text-2xl">{me.displayName}</h2>
-                            {me.steamId ? (
-                              <a
-                                href={`https://steamcommunity.com/profiles/${encodeURIComponent(me.steamId)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-cb-stroke/60 bg-black/45 transition hover:border-sky-500/50 hover:bg-sky-950/20"
-                                aria-label="Профиль в Steam"
-                                title="Профиль в Steam"
-                              >
-                                <Image
-                                  src="/brand/steam-mark.png"
-                                  alt=""
-                                  width={26}
-                                  height={26}
-                                  className="h-[1.35rem] w-[1.35rem] object-contain"
-                                  unoptimized
-                                />
-                              </a>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={logoutProfile}
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cb-stroke/60 bg-black/45 text-zinc-500 transition hover:border-red-500/35 hover:text-red-400"
-                              aria-label="Выйти"
-                              title="Выйти"
-                            >
-                              <ProfileLogoutIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <div className="flex shrink-0 flex-row items-center justify-end gap-1.5">
-                            {me.isSupportStaff && !me.isAdmin ? (
-                              <Link
-                                href="/admin/support"
-                                className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 transition hover:text-sky-300"
-                              >
-                                Поддержка
-                              </Link>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ProfileRankIcon rankStep={rankInfo.rankStep} label={rankInfo.label} />
-                          <span className="text-[11px] text-zinc-500">
-                            XP:{" "}
-                            <span className="font-mono text-zinc-400">{rankInfo.xpTotal}</span>
-                          </span>
-                          <span className="text-[11px] text-zinc-600">
-                            Предметов:{" "}
-                            <span className="font-mono font-semibold text-zinc-400">{me.inventory.length}</span>
-                          </span>
-                        </div>
-                        <div>
-                          <div className="h-2 overflow-hidden rounded-full bg-black/55 ring-1 ring-cb-stroke/45">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-cb-flame via-orange-500 to-amber-400 transition-[width] duration-500"
-                              style={{ width: `${rankXpPct}%` }}
-                            />
-                          </div>
-                          <p className="mt-1.5 text-[11px] text-zinc-500">
-                            До следующего ранга:{" "}
-                            <span className="font-mono text-zinc-300">{rankXpToNext} XP</span>
-                          </p>
-                        </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={logoutProfile}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-950/25 px-3 py-2 text-xs font-bold text-red-300 transition hover:border-red-500/40 hover:text-red-200"
+                          title="Выйти"
+                        >
+                          <span>Выйти</span>
+                          <ProfileLogoutIcon className="h-3.5 w-3.5" />
+                        </button>
                         {me.steamId ? (
-                          <Link
-                            href={`/user/${encodeURIComponent(me.steamId)}`}
-                            className="inline-flex w-fit items-center justify-center rounded-xl border border-cb-stroke/55 bg-black/35 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-300 shadow-inner ring-1 ring-black/25 transition hover:border-cb-flame/35 hover:bg-black/50 hover:text-zinc-100 sm:text-[11px]"
+                          <a
+                            href={`https://steamcommunity.com/profiles/${encodeURIComponent(me.steamId)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-cb-stroke/60 bg-black/35 transition hover:border-sky-500/50 hover:bg-sky-950/20"
+                            aria-label="Профиль в Steam"
+                            title="Профиль в Steam"
                           >
-                            Публичный профиль
-                          </Link>
+                            <Image
+                              src="/brand/steam-mark.png"
+                              alt=""
+                              width={20}
+                              height={20}
+                              className="h-5 w-5 object-contain"
+                              unoptimized
+                            />
+                          </a>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="min-w-0 w-full flex-1 space-y-3 lg:min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                          Steam trade URL
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <div className="flex min-w-[14rem] flex-1 items-center rounded-xl border border-cb-stroke/60 bg-black/45 pl-3 pr-2">
+                        <span className="mr-2 text-zinc-500" aria-hidden>
+                          🔗
                         </span>
-                        <span
-                          className={`text-[10px] font-bold uppercase ${tradeUrlOk ? "text-emerald-400/90" : "text-zinc-600"}`}
-                        >
-                          {tradeUrlOk ? "OK" : "Нет"}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
                         <input
                           value={tradeUrl}
                           onChange={(e) => setTradeUrl(e.target.value)}
-                          placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…"
-                          className="min-h-[2.75rem] flex-1 rounded-xl border border-cb-stroke/70 bg-black/45 px-3 py-2 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-600 focus:border-cb-flame/50 focus:outline-none focus:ring-1 focus:ring-cb-flame/30 sm:text-xs"
+                          placeholder="Введите вашу Trade-ссылку"
+                          className="h-10 w-full bg-transparent text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={saveTradeUrl}
-                          className="shrink-0 rounded-xl border border-cb-stroke/70 bg-zinc-900/90 px-3 py-2 text-sm font-bold text-zinc-200 transition hover:border-cb-flame/45 hover:text-white"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cb-stroke/60 bg-zinc-900/85 text-xs font-bold text-zinc-300 transition hover:border-cb-flame/45 hover:text-white"
                           title="Сохранить в браузере"
                         >
                           ✓
                         </button>
                       </div>
-                      <p className="text-[10px] leading-relaxed sm:text-[11px]">
-                        <a
-                          href="https://steamcommunity.com/my/tradeoffers/privacy#trade_url"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold uppercase tracking-wide transition hover:opacity-90"
-                        >
-                          <span className="text-red-500">(Нажмите здесь!)</span>
-                          <span className="text-zinc-500"> чтобы найти свой Steam trade URL</span>
-                        </a>
-                      </p>
-                      {tradeSavedFlash ? (
-                        <p className="text-[11px] font-semibold text-emerald-400/95">Сохранено</p>
-                      ) : null}
+                      <a
+                        href="https://steamcommunity.com/my/tradeoffers/privacy#trade_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-cb-stroke/60 bg-black/35 px-3 text-xs font-bold text-zinc-300 transition hover:text-white"
+                      >
+                        <span aria-hidden>?</span>
+                        <span>Где найти?</span>
+                      </a>
+                    </div>
+                    {tradeSavedFlash ? (
+                      <p className="mt-2 text-[11px] font-semibold text-emerald-400/95">Сохранено</p>
+                    ) : null}
+                    {me.steamId ? (
+                      <Link
+                        href={`/user/${encodeURIComponent(me.steamId)}`}
+                        className="mt-3 inline-flex text-[11px] font-semibold text-zinc-400 transition hover:text-zinc-200"
+                      >
+                        Публичный профиль
+                      </Link>
+                    ) : null}
+                  </div>
 
-                      <div className="grid w-full grid-cols-1 gap-2 border-t border-cb-stroke/35 pt-3 sm:grid-cols-2 sm:gap-3">
-                        <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-cb-stroke/55 bg-black/40 px-3 py-2.5 shadow-inner">
-                          <ProfileWalletIcon className="h-5 w-5 shrink-0 text-cb-flame" />
-                          <div className="min-w-0">
-                            <p className="truncate font-mono text-sm font-black leading-tight text-cb-flame">
-                              <SiteMoney
-                                value={me.balance}
-                                className="text-cb-flame"
-                                iconClassName="h-4 w-4 shrink-0 text-cb-flame"
-                              />
-                            </p>
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Баланс</p>
+                  <div
+                    className={`${profileCard} ${
+                      favoriteCaseCard?.accent
+                        ? (caseAccentPanelClass[String(favoriteCaseCard.accent || "").toLowerCase()] || "")
+                        : ""
+                    } flex min-h-[12.25rem] flex-col justify-between overflow-hidden p-4 sm:p-5`}
+                  >
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Любимый кейс</p>
+                      <p className="mt-2 line-clamp-2 text-lg font-black leading-tight text-white">
+                        {favoriteCaseCard?.name || "Пусто"}
+                      </p>
+                      {favoriteCaseCard?.opens ? (
+                        <p className="mt-1 text-[11px] text-zinc-500">Открыт: {favoriteCaseCard.opens} раз</p>
+                      ) : null}
+                    </div>
+                    {favoriteCaseCard?.image ? (
+                      <div className="relative mt-3 h-24 w-full">
+                        <Image
+                          src={favoriteCaseCard.image}
+                          alt={favoriteCaseCard.name}
+                          fill
+                          className={`object-contain p-1 scale-[1.35] translate-x-4 -translate-y-2 ${
+                            caseAccentGlowClass[String(favoriteCaseCard?.accent || "").toLowerCase()] ||
+                            "drop-shadow-[0_0_14px_rgba(255,255,255,0.25)]"
+                          }`}
+                          unoptimized
+                        />
+                        {favoriteCaseCard.skinImage ? (
+                          <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center p-[10%] pb-[14%] sm:p-[9%] sm:pb-[13%]">
+                            <div className="relative aspect-square w-[62%] max-w-[248px] origin-center translate-x-3 -translate-y-1">
+                              <div className="cb-case-skin-float-y relative h-full w-full">
+                                <Image
+                                  src={preferHighResSteamEconomyImage(favoriteCaseCard.skinImage) ?? favoriteCaseCard.skinImage}
+                                  alt=""
+                                  fill
+                                  className="object-contain drop-shadow-[0_8px_28px_rgba(0,0,0,0.58)] [transform:translateZ(0)] [image-rendering:high-quality] [-webkit-backface-visibility:hidden]"
+                                  unoptimized
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-cb-stroke/55 bg-black/40 px-3 py-2.5 shadow-inner">
-                          <span className="shrink-0 text-base text-emerald-400/90" aria-hidden>
-                            ◎
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-mono text-sm font-black leading-tight text-emerald-300/95">
-                              {formatSiteAmount(fullInventoryScValue)}
-                            </p>
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">
-                              Сумма инвентаря
-                            </p>
-                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {accountStats.casesOpened === 0 ? (
+                      <Link
+                        href="/cases"
+                        className="inline-flex w-fit items-center justify-center rounded-lg border border-cb-stroke/60 bg-black/35 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:border-cb-flame/45 hover:text-white"
+                      >
+                        Открыть кейс
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  <div
+                    className={`${profileCard} ${
+                      bestDrop
+                        ? (rarityPanelClass[String(bestDrop.rarity || "").toLowerCase()] || rarityPanelClass.common)
+                        : rarityPanelClass.common
+                    } flex min-h-[12.25rem] flex-col justify-between overflow-hidden p-4 sm:p-5`}
+                  >
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Лучший предмет</p>
+                      <p className="mt-1 line-clamp-2 text-[15px] font-black leading-tight text-white">
+                        {bestDrop?.name || "Пусто"}
+                      </p>
+                    </div>
+                    {bestDrop?.image ? (
+                      <div className="relative mt-3 h-24 w-full">
+                        <div className="relative h-full w-full scale-[1.45]">
+                          <Image
+                            src={preferHighResSteamEconomyImage(bestDrop.image) ?? bestDrop.image}
+                            alt={bestDrop.name}
+                            fill
+                            className={`object-contain p-1 scale-110 ${SKIN_IMG_QUALITY_CLASS} ${
+                              rarityGlowClass[String(bestDrop.rarity || "").toLowerCase()] ||
+                              rarityGlowClass.common
+                            }`}
+                            quality={100}
+                            unoptimized
+                          />
                         </div>
                       </div>
-                    </div>
+                    ) : null}
+                    {accountStats.casesOpened === 0 ? (
+                      <Link
+                        href="/cases"
+                        className="inline-flex w-fit items-center justify-center rounded-lg border border-cb-stroke/60 bg-black/35 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:border-cb-flame/45 hover:text-white"
+                      >
+                        Открыть кейс
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
 

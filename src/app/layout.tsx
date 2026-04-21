@@ -5,6 +5,7 @@ import { AuthModalHost } from "@/components/AuthModalHost";
 import { SteamLoginRedirectHost } from "@/components/SteamLoginRedirectHost";
 import { ClosedBetaBoundary } from "@/components/ClosedBetaBoundary";
 import { StormAtmosphere } from "@/components/StormAtmosphere";
+import { Analytics } from "@vercel/analytics/next";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin", "cyrillic"],
@@ -90,6 +91,7 @@ export default function RootLayout({
         </div>
         <AuthModalHost />
         <SteamLoginRedirectHost />
+        <Analytics />
       </body>
     </html>
   );

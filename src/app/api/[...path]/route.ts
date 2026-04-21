@@ -35,6 +35,31 @@ const forwardHeaderNames = [
   "x-requested-with",
 ];
 
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithTransientRetry(
+  target: string,
+  init: RequestInit,
+  method: string,
+): Promise<Response> {
+  // After admin writes (slides, promos) backend may briefly restart in dev/watch mode.
+  // A short retry avoids noisy 503 bursts for parallel GET polling on the frontend.
+  const attempts = method === "GET" || method === "HEAD" ? 3 : 1;
+  let lastErr: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetch(target, init);
+    } catch (e) {
+      lastErr = e;
+      if (i >= attempts - 1) break;
+      await sleep(120 * (i + 1));
+    }
+  }
+  throw lastErr;
+}
+
 async function proxy(req: NextRequest, pathSegments: string[]) {
   const path = pathSegments.join("/");
   const origin = backendOrigin();
@@ -50,13 +75,17 @@ async function proxy(req: NextRequest, pathSegments: string[]) {
     body = await req.arrayBuffer();
   }
   try {
-    const res = await fetch(target, {
+    const res = await fetchWithTransientRetry(
+      target,
+      {
       method,
       headers,
       body,
       cache: "no-store",
       redirect: "manual",
-    });
+      },
+      method,
+    );
     const outHeaders = new Headers(res.headers);
     return new NextResponse(res.body, {
       status: res.status,

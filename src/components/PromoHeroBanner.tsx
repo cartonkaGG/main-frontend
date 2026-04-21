@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
-import type { HomePromoHeroCarouselSlide, HomePromoHeroConfig } from "@/lib/siteUi";
+import { normalizeHomeSlide, type HomeSlide } from "@/lib/slides";
 
 type FeaturedPromo = {
   id: string;
@@ -15,19 +15,6 @@ type FeaturedPromo = {
   rewardType?: "balance" | "depositPct";
   depositPercent?: number;
 };
-
-function pad(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
-function formatRemaining(ms: number) {
-  if (ms <= 0) return "00:00:00";
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-}
 
 function formatCodeDisplay(code: string) {
   const raw = code.replace(/[\s-]+/g, "").toUpperCase();
@@ -66,21 +53,23 @@ function HeroCtaLink({
   className?: string;
   children: ReactNode;
 }) {
-  const ext = /^https?:\/\//i.test(href);
-  if (ext) {
+  const normalizedHref = href.trim();
+  const isInternalPath = normalizedHref.startsWith("/") && !normalizedHref.startsWith("//");
+  const isHttp = /^https?:\/\//i.test(normalizedHref);
+  if (!isInternalPath) {
     return (
       <a
-        href={href}
+        href={normalizedHref}
         className={className}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={isHttp ? "_blank" : undefined}
+        rel={isHttp ? "noopener noreferrer" : undefined}
       >
         {children}
       </a>
     );
   }
   return (
-    <Link href={href} className={className}>
+    <Link href={normalizedHref} className={className}>
       {children}
     </Link>
   );
@@ -105,15 +94,29 @@ function LockIcon({ className }: { className?: string }) {
   );
 }
 
+const DEFAULT_HERO = {
+  title: "Бесплатный бонус на баланс",
+  subtitle: "",
+  gradientFrom: "#0c1830",
+  gradientVia: "#0a1424",
+  gradientTo: "#050810",
+  bgKind: "gradient" as const,
+  bgImageUrl: "",
+  bgImageOverlay: 0.55,
+  buttons: [] as Array<{ label: string; href: string }>,
+  carouselImageScalePct: 100,
+};
+
 type Props = {
-  hero: HomePromoHeroConfig;
+  hero?: Partial<typeof DEFAULT_HERO>;
 };
 
 export function PromoHeroBanner({ hero }: Props) {
+  const heroCfg = { ...DEFAULT_HERO, ...(hero || {}) };
   const [featured, setFeatured] = useState<FeaturedPromo | null>(null);
-  const [tick, setTick] = useState(0);
   const [copied, setCopied] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
+  const [slides, setSlides] = useState<HomeSlide[]>([]);
 
   const loadFeatured = useCallback(async () => {
     const r = await apiFetch<{ promo: FeaturedPromo | null }>("/api/promo/featured");
@@ -130,17 +133,35 @@ export function PromoHeroBanner({ hero }: Props) {
     return () => window.removeEventListener("cd-promos-updated", h);
   }, [loadFeatured]);
 
-  useEffect(() => {
-    if (!featured?.endsAt) return;
-    const t = setInterval(() => setTick((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, [featured?.endsAt]);
+  const loadSlides = useCallback(async () => {
+    const r = await apiFetch<{ slides?: unknown[] }>("/api/slides");
+    if (!r.ok || !r.data?.slides) {
+      setSlides([]);
+      return;
+    }
+    const normalized = r.data.slides
+      .map((s, i) => normalizeHomeSlide(s, i))
+      .filter((s) => s.isActive)
+      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    setSlides(normalized);
+  }, []);
 
-  const endsMs = featured?.endsAt ? new Date(featured.endsAt).getTime() : null;
-  const remaining =
-    endsMs != null && Number.isFinite(endsMs)
-      ? endsMs - Date.now() + 0 * tick
-      : null;
+  useEffect(() => {
+    void loadSlides();
+  }, [loadSlides]);
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const h = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => void loadSlides(), 400);
+    };
+    window.addEventListener("cd-slides-updated", h);
+    return () => {
+      window.removeEventListener("cd-slides-updated", h);
+      if (t) clearTimeout(t);
+    };
+  }, [loadSlides]);
 
   const displayCode = featured?.code || "";
   const depositPct = featured?.depositPercent ?? 0;
@@ -153,51 +174,60 @@ export function PromoHeroBanner({ hero }: Props) {
   const promoHeadline =
     pctShown > 0 ? `Бонус к депозиту ${pctShown}%` : "Бонус к депозиту";
 
-  const showImageBg = hero.bgKind === "image" && hero.bgImageUrl.trim().length > 0;
+  const slidesLen = slides.length;
+  const slidesActive = slidesLen > 0;
+  const activeSlide = slidesActive ? slides[carouselIdx] : null;
+  const titleShown = activeSlide?.title?.trim() || heroCfg.title;
+  const subtitleShown = activeSlide?.subtitle?.trim() || heroCfg.subtitle;
+  const slideButtonText = activeSlide?.buttonText?.trim() || "";
+  const slideButtonLink = activeSlide?.buttonLink?.trim() || "";
+  const mainButtons =
+    slideButtonText && slideButtonLink
+      ? [{ label: slideButtonText, href: slideButtonLink }]
+      : heroCfg.buttons;
+  const slideBgRaw = activeSlide?.backgroundImage?.trim() || "";
+  const slideBgGradient =
+    slideBgRaw.startsWith("linear-gradient(") || slideBgRaw.startsWith("radial-gradient(");
+  const slideOverlayOpacity =
+    activeSlide && Number.isFinite(activeSlide.overlayOpacity)
+      ? Math.max(0, Math.min(0.9, activeSlide.overlayOpacity))
+      : heroCfg.bgImageOverlay;
+  const showImageBg =
+    (slideBgRaw.length > 0 && !slideBgGradient) ||
+    (heroCfg.bgKind === "image" && heroCfg.bgImageUrl.trim().length > 0);
+  const bgImageUrl = slideBgRaw.length > 0 && !slideBgGradient ? slideBgRaw : heroCfg.bgImageUrl;
 
   const heroShellStyle = useMemo(() => {
+    if (slideBgGradient) {
+      return { background: slideBgRaw } as const;
+    }
     if (showImageBg) return undefined;
     return {
-      background: `linear-gradient(to bottom right, ${hero.gradientFrom}, ${hero.gradientVia}, ${hero.gradientTo})`,
+      background: `linear-gradient(to bottom right, ${heroCfg.gradientFrom}, ${heroCfg.gradientVia}, ${heroCfg.gradientTo})`,
     } as const;
-  }, [hero.gradientFrom, hero.gradientVia, hero.gradientTo, showImageBg]);
-
-  /** Лише явний true — уникаємо truthy-рядків / Boolean("false") з API. */
-  const carouselEnabledStrict = hero.carouselEnabled === true;
-
-  const carouselSlides = useMemo(() => {
-    if (!carouselEnabledStrict) return [];
-    const list = Array.isArray(hero.carouselSlides) ? hero.carouselSlides : [];
-    return list.filter((s) => {
-      const u = typeof s?.imageUrl === "string" ? s.imageUrl.trim() : "";
-      return u.length > 0;
-    }) as HomePromoHeroCarouselSlide[];
-  }, [carouselEnabledStrict, hero.carouselSlides]);
-
-  const carouselLen = carouselSlides.length;
-  const carouselActive = carouselLen > 0;
+  }, [slideBgGradient, slideBgRaw, showImageBg, heroCfg.gradientFrom, heroCfg.gradientVia, heroCfg.gradientTo]);
 
   useEffect(() => {
-    setCarouselIdx((i) => (carouselLen <= 0 ? 0 : Math.min(i, carouselLen - 1)));
-  }, [carouselLen]);
+    setCarouselIdx((i) => (slidesLen <= 0 ? 0 : Math.min(i, slidesLen - 1)));
+  }, [slidesLen]);
 
   useEffect(() => {
-    if (!carouselActive || carouselLen <= 1) return;
+    if (!slidesActive || slidesLen <= 1) return;
     const t = window.setInterval(() => {
-      setCarouselIdx((i) => (i + 1) % carouselLen);
-    }, 7000);
+      setCarouselIdx((i) => (i + 1) % slidesLen);
+    }, 6000);
     return () => window.clearInterval(t);
-  }, [carouselActive, carouselLen]);
+  }, [slidesActive, slidesLen]);
 
   const goPrev = useCallback(() => {
-    if (carouselLen <= 1) return;
-    setCarouselIdx((i) => (i - 1 + carouselLen) % carouselLen);
-  }, [carouselLen]);
+    if (slidesLen <= 1) return;
+    setCarouselIdx((i) => (i - 1 + slidesLen) % slidesLen);
+  }, [slidesLen]);
 
   const goNext = useCallback(() => {
-    if (carouselLen <= 1) return;
-    setCarouselIdx((i) => (i + 1) % carouselLen);
-  }, [carouselLen]);
+    if (slidesLen <= 1) return;
+    setCarouselIdx((i) => (i + 1) % slidesLen);
+  }, [slidesLen]);
 
   const copyCode = useCallback(async () => {
     if (!displayCode) return;
@@ -224,15 +254,17 @@ export function PromoHeroBanner({ hero }: Props) {
               <>
                 <div
                   className="pointer-events-none absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${hero.bgImageUrl})` }}
-                  aria-hidden
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 bg-black"
-                  style={{ opacity: hero.bgImageOverlay }}
+                  style={{ backgroundImage: `url(${bgImageUrl})` }}
                   aria-hidden
                 />
               </>
+            ) : null}
+            {slideOverlayOpacity > 0 ? (
+              <div
+                className="pointer-events-none absolute inset-0 bg-black"
+                style={{ opacity: slideOverlayOpacity }}
+                aria-hidden
+              />
             ) : null}
             <div
               className="pointer-events-none absolute -right-12 top-1/2 z-0 h-48 w-48 -translate-y-1/2 rounded-full bg-sky-500/10 blur-3xl"
@@ -257,16 +289,18 @@ export function PromoHeroBanner({ hero }: Props) {
             <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
               <div className="flex shrink-0 items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-balance text-base font-black uppercase leading-snug tracking-tight text-white sm:text-lg">
-                    {hero.title}
+                  <h2 className="text-balance whitespace-pre-line text-xl font-black uppercase leading-tight tracking-tight text-white sm:text-2xl lg:text-3xl">
+                    {titleShown}
                   </h2>
-                  <p className="mt-1 max-w-lg text-xs font-semibold uppercase leading-snug tracking-wide text-slate-400 sm:text-sm">
-                    {hero.subtitle}
-                  </p>
+                  {subtitleShown ? (
+                    <p className="mt-2 max-w-lg text-sm font-semibold uppercase leading-snug tracking-wide text-slate-300 sm:text-base">
+                      {subtitleShown}
+                    </p>
+                  ) : null}
                 </div>
-                {carouselActive && carouselLen > 1 ? (
+                {slidesActive && slidesLen > 1 ? (
                   <div className="flex shrink-0 gap-1.5" role="tablist" aria-label="Слайды банера">
-                    {carouselSlides.map((_, i) => (
+                    {slides.map((_, i) => (
                       <button
                         key={i}
                         type="button"
@@ -281,133 +315,48 @@ export function PromoHeroBanner({ hero }: Props) {
                 ) : null}
               </div>
 
-              {hero.buttons.length > 0 ? (
-                <div className="mt-2.5 flex shrink-0 flex-wrap gap-2 sm:gap-2">
-                  {hero.buttons.map((b) => (
+              <div className="mt-3 flex min-h-0 flex-1 flex-col justify-end gap-3 sm:mt-4 sm:gap-4">
+                {activeSlide?.foregroundImage ? (
+                  <div className="relative flex min-h-[92px] min-w-0 flex-1 flex-col items-center justify-end sm:min-h-0 sm:max-w-[min(100%,420px)] sm:items-end">
+                    <div className="relative flex h-full min-h-[92px] w-full max-w-full flex-col items-stretch justify-end overflow-hidden rounded-xl sm:min-h-0">
+                      <div className="relative z-[1] flex min-h-0 flex-col items-center justify-end">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- зовнішні URL із адмінки */}
+                        <img
+                          key={`${activeSlide.foregroundImage}-${carouselIdx}`}
+                          src={activeSlide.foregroundImage}
+                          alt={activeSlide.title || "Banner image"}
+                          className="h-auto max-h-[min(160px,28vh)] w-auto max-w-full object-contain object-bottom sm:max-h-[min(200px,30vh)] lg:max-h-[min(220px,32vh)]"
+                          style={{
+                            transform: `scale(${Math.min(180, Math.max(40, heroCfg.carouselImageScalePct || 100)) / 100})`,
+                            transformOrigin: "bottom center",
+                          }}
+                          loading={carouselIdx === 0 ? "eager" : "lazy"}
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1" aria-hidden />
+                )}
+              </div>
+              {mainButtons.length > 0 ? (
+                <div className="mt-2 flex w-full shrink-0 flex-wrap justify-start gap-2 sm:mt-3">
+                  {mainButtons.map((b) => (
                     <HeroCtaLink
                       key={`${b.href}-${b.label}`}
                       href={b.href}
-                      className="inline-flex min-h-[2.25rem] items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-center text-[11px] font-black uppercase tracking-wider text-white shadow backdrop-blur-sm transition hover:bg-white/20 sm:min-h-[2.5rem] sm:px-4 sm:text-xs"
+                      className="inline-flex min-h-[3rem] w-auto max-w-full items-center justify-center rounded-xl border border-white/25 bg-white/15 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_10px_32px_-14px_rgba(0,0,0,0.9)] backdrop-blur-sm transition hover:bg-white/25 sm:min-h-[3.25rem] sm:px-6 sm:text-base"
                     >
                       {b.label}
                     </HeroCtaLink>
                   ))}
                 </div>
               ) : null}
-
-              <div className="mt-auto flex min-h-0 flex-col justify-end gap-3 pt-2 sm:mt-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-                <div className="flex min-w-0 shrink-0 flex-col justify-end">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-300/90 sm:text-[10px]">
-                    Осталось времени
-                  </p>
-                  <p className="mt-0.5 font-mono text-xl font-bold tabular-nums tracking-wide text-white sm:text-2xl">
-                    {featured && remaining == null
-                      ? "Бессрочно"
-                      : remaining != null && remaining <= 0
-                        ? "00:00:00"
-                        : remaining != null
-                          ? formatRemaining(remaining)
-                          : "— — —"}
-                  </p>
-                  {remaining != null && remaining <= 0 && featured && (
-                    <p className="mt-1 text-xs font-medium text-red-400/90">Акция завершена</p>
-                  )}
-                  {featured && remaining == null && (
-                    <p className="mt-1 text-xs text-zinc-500">Без дедлайна</p>
-                  )}
-                </div>
-
-                {carouselActive ? (
-                  <div className="relative flex min-h-[92px] min-w-0 flex-1 flex-col items-center justify-end sm:min-h-0 sm:max-w-[min(100%,420px)] sm:items-end">
-                    <div className="relative flex h-full min-h-[92px] w-full max-w-full flex-col items-stretch justify-end overflow-hidden rounded-xl sm:min-h-0">
-                      {(() => {
-                        const slide = carouselSlides[carouselIdx];
-                        if (!slide) return null;
-                        const scale = Math.min(180, Math.max(40, hero.carouselImageScalePct || 100)) / 100;
-                        const bgKind = slide.slideBgKind ?? "none";
-                        const gFrom = slide.slideGradientFrom ?? "#0c1830";
-                        const gVia = slide.slideGradientVia ?? "#0a1424";
-                        const gTo = slide.slideGradientTo ?? "#050810";
-                        const showSlideGrad = bgKind === "gradient";
-                        const showSlideImg =
-                          bgKind === "image" && (slide.slideBgImageUrl ?? "").trim().length > 0;
-                        const slideOv =
-                          typeof slide.slideBgOverlay === "number" && Number.isFinite(slide.slideBgOverlay)
-                            ? Math.min(0.95, Math.max(0, slide.slideBgOverlay))
-                            : 0.45;
-                        const cap = (slide.caption ?? "").trim();
-
-                        const inner = (
-                          // eslint-disable-next-line @next/next/no-img-element -- довільні https URL з адмінки (imgbb, PNG з альфою)
-                          <img
-                            key={`${slide.imageUrl}-${carouselIdx}`}
-                            src={slide.imageUrl.trim()}
-                            alt={slide.alt?.trim() || ""}
-                            className="h-auto max-h-[min(160px,28vh)] w-auto max-w-full object-contain object-bottom sm:max-h-[min(200px,30vh)] lg:max-h-[min(220px,32vh)]"
-                            style={{
-                              transform: `scale(${scale})`,
-                              transformOrigin: "bottom center",
-                            }}
-                            loading={carouselIdx === 0 ? "eager" : "lazy"}
-                            decoding="async"
-                            referrerPolicy="no-referrer"
-                          />
-                        );
-
-                        return (
-                          <>
-                            {showSlideGrad ? (
-                              <div
-                                className="pointer-events-none absolute inset-0 z-0"
-                                style={{
-                                  background: `linear-gradient(to bottom right, ${gFrom}, ${gVia}, ${gTo})`,
-                                }}
-                                aria-hidden
-                              />
-                            ) : null}
-                            {showSlideImg ? (
-                              <>
-                                <div
-                                  className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-                                  style={{
-                                    backgroundImage: `url(${(slide.slideBgImageUrl ?? "").trim()})`,
-                                  }}
-                                  aria-hidden
-                                />
-                                <div
-                                  className="pointer-events-none absolute inset-0 z-0 bg-black"
-                                  style={{ opacity: slideOv }}
-                                  aria-hidden
-                                />
-                              </>
-                            ) : null}
-                            {cap ? (
-                              <p className="relative z-[2] px-2 pb-1 pt-2 text-center text-[10px] font-black uppercase leading-snug tracking-wide text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)] sm:text-[11px]">
-                                {cap}
-                              </p>
-                            ) : null}
-                            <div className="relative z-[1] flex min-h-0 flex-col items-center justify-end">
-                              {slide.href ? (
-                                <HeroCtaLink
-                                  href={slide.href.trim()}
-                                  className="flex max-h-full max-w-full items-end justify-center outline-none ring-offset-2 ring-offset-transparent focus-visible:ring-2 focus-visible:ring-cb-flame/60"
-                                >
-                                  {inner}
-                                </HeroCtaLink>
-                              ) : (
-                                <div className="flex max-h-full max-w-full items-end justify-center">{inner}</div>
-                              )}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
 
-            {carouselActive && carouselLen > 1 ? (
+            {slidesActive && slidesLen > 1 ? (
               <div className="absolute bottom-3 right-3 z-[2] flex items-center gap-1.5 sm:bottom-4 sm:right-4">
                 <button
                   type="button"

@@ -18,7 +18,7 @@ type Session = {
   isAdmin?: boolean;
   isSupportStaff?: boolean;
   isPartner?: boolean;
-  /** Рівень партнерки з /api/me/session (за замовчуванням 0). */
+  /** Рівень партнерки з /api/me/session (за замовчуванням 1). */
   partnerLevel?: number;
 };
 
@@ -91,6 +91,20 @@ const nav: { tab: PartnerCabinetTab; label: string; Icon: typeof DashboardIcon }
   { tab: "faq", label: "F.A.Q", Icon: FaqIcon },
 ];
 
+const PARTNER_LEVEL_OVERRIDE_KEY = "partner-level-override";
+const PARTNER_LEVEL_OVERRIDE_EVENT = "partner-level-override-change";
+
+function readPartnerLevelOverride(): number | null {
+  try {
+    const raw = window.localStorage.getItem(PARTNER_LEVEL_OVERRIDE_KEY);
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 1 && n <= 5) return Math.floor(n);
+  } catch {
+    /* */
+  }
+  return null;
+}
+
 export function PartnerDashboardShell({ children }: { children: React.ReactNode }) {
   const { tab, setTab } = usePartnerCabinetTab();
   const [me, setMe] = useState<Session | null>(null);
@@ -98,6 +112,9 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
   const load = useCallback(async () => {
     const r = await apiFetch<Session>("/api/me/session");
     if (r.ok && r.data) {
+      const serverLevel =
+        typeof r.data.partnerLevel === "number" && r.data.partnerLevel > 0 ? r.data.partnerLevel : 1;
+      const overrideLevel = readPartnerLevelOverride();
       setMe({
         displayName: r.data.displayName,
         avatar: r.data.avatar || "",
@@ -105,7 +122,7 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
         isAdmin: r.data.isAdmin,
         isSupportStaff: r.data.isSupportStaff,
         isPartner: r.data.isPartner,
-        partnerLevel: typeof r.data.partnerLevel === "number" ? r.data.partnerLevel : 0,
+        partnerLevel: overrideLevel ?? serverLevel,
       });
     }
   }, []);
@@ -113,6 +130,19 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const onLevelOverride = (evt: Event) => {
+      const e = evt as CustomEvent<{ level?: number }>;
+      const next = Number(e.detail?.level);
+      if (!Number.isFinite(next) || next < 1 || next > 5) return;
+      setMe((prev) => (prev ? { ...prev, partnerLevel: Math.floor(next) } : prev));
+    };
+    window.addEventListener(PARTNER_LEVEL_OVERRIDE_EVENT, onLevelOverride as EventListener);
+    return () => {
+      window.removeEventListener(PARTNER_LEVEL_OVERRIDE_EVENT, onLevelOverride as EventListener);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-[100dvh] w-full bg-[#0a0a0a] text-zinc-100">
@@ -169,7 +199,7 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
             <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
               <p className="truncate text-base font-semibold leading-tight text-white">{me.displayName}</p>
               <div className="shrink-0" title="Уровень партнёрской программы">
-                <PartnerLevelHudOrb level={me.partnerLevel ?? 0} compact />
+                <PartnerLevelHudOrb level={me.partnerLevel ?? 1} compact />
               </div>
             </div>
           </Link>

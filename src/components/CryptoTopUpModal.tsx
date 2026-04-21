@@ -228,7 +228,7 @@ export function CryptoTopUpModal({ open, onClose, onSuccess }: Props) {
             </h2>
             <p className="mb-5 text-[11px] text-zinc-500">
               Оплата через NOWPayments. Минимум <span className="font-mono text-zinc-400">{minUsd} USD</span>.
-              Зачисление на баланс ({SITE_CURRENCY_CODE}) по курсу, который задаёт админ (Админка → Интерфейс / site-ui). В
+              Зачисление на баланс ({SITE_CURRENCY_CODE}) по курсу, который задаёт админ в серверной конфигурации. В
               интерфейсе суммы отображаются с иконкой молнии.
             </p>
 

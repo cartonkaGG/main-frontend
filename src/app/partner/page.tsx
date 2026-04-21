@@ -5,6 +5,9 @@ import { apiFetch } from "@/lib/api";
 import { PartnerFaqAccordion } from "@/components/PartnerFaqAccordion";
 import { PartnerMaterialBanner } from "@/components/PartnerMaterialBanner";
 import { PartnerMaterialBannerShare } from "@/components/PartnerMaterialBannerShare";
+import { PartnerMaterialWideBannerShare } from "@/components/PartnerMaterialWideBannerShare";
+import { PartnerMaterialWideTitleBanner } from "@/components/PartnerMaterialWideTitleBanner";
+import { PartnerLevelsProgress } from "@/components/PartnerLevelsProgress";
 import { SiteMoney } from "@/components/SiteMoney";
 import { usePartnerCabinetTab } from "@/contexts/PartnerCabinetTabContext";
 
@@ -13,7 +16,7 @@ type Dash = {
     id: string;
     percentBps: number;
     percentDisplay: string;
-    /** Рівень партнерки / рефералки (поки всім 0). */
+    /** Рівень партнерки / рефералки (стартово 1). */
     level: number;
     totalEarnedConfirmedRub: number;
     totalEarnedPendingRub: number;
@@ -176,7 +179,7 @@ export default function PartnerDashboardPage() {
               <span className="font-mono text-zinc-400">{shortId}</span>
               {" · "}
               уровень{" "}
-              <span className="font-mono text-zinc-300">{p.level ?? 0}</span>
+              <span className="font-mono text-zinc-300">{p.level ?? 1}</span>
               {" · "}
               ставка{" "}
               <span className="font-mono text-cb-flame/95">{p.percentDisplay}%</span> от чистой базы депозита
@@ -226,123 +229,59 @@ export default function PartnerDashboardPage() {
           />
         </div>
 
-        {statsErr ? (
-          <p className="text-sm text-red-400">{statsErr}</p>
-        ) : loadingStats ? (
-          <p className="text-sm text-zinc-500">Загрузка данных периода…</p>
-        ) : stats ? (
-          <div className="grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                  Разбивка за период
-                </h3>
-                <span className="text-[10px] text-zinc-600">{periodLabel(period.from, period.to)}</span>
-              </div>
-              <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#111]/80">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-zinc-500">
-                      <th className="px-4 py-3 font-semibold">Категория</th>
-                      <th className="px-4 py-3 font-semibold">Сумма</th>
-                      <th className="px-4 py-3 text-right font-semibold">События</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
-                    <tr>
-                      <td className="px-4 py-3.5 text-zinc-300">Начисления партнёру</td>
-                      <td className="px-4 py-3.5 font-mono text-cb-flame">
-                        <SiteMoney value={stats.totals.rewardRub} className="inline text-cb-flame" />
-                      </td>
-                      <td className="px-4 py-3.5 text-right font-mono text-zinc-400">{stats.totals.count}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3.5 text-zinc-300">Нетто-депозиты (база)</td>
-                      <td className="px-4 py-3.5 font-mono text-zinc-400">
-                        <SiteMoney value={stats.totals.netDepositRub} className="inline text-zinc-400" />
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-zinc-600">—</td>
-                    </tr>
-                    {p.totalEarnedConfirmedRub > 0 ? (
-                      <tr>
-                        <td className="px-4 py-3.5 text-zinc-500">Архив (старые подтверждения)</td>
-                        <td className="px-4 py-3.5 font-mono text-zinc-500">
-                          <SiteMoney value={p.totalEarnedConfirmedRub} className="inline" />
-                        </td>
-                        <td className="px-4 py-3.5 text-right text-zinc-600">—</td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <PartnerLevelsProgress
+          initialReferralsCount={Math.max(0, Math.floor(Number(p.usersActivated) || 0))}
+          totalEarnedRub={Math.max(0, Math.floor(Number(p.totalPaidOutRub) || 0))}
+          promoCodes={(data?.codes ?? []).map((c) => ({
+            id: c.id,
+            code: c.code,
+            active: c.active,
+            depositBonusPercent: c.depositBonusPercent,
+          }))}
+        />
 
-            <div className="lg:col-span-2">
-              <div className="mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                  Динамика начислений
-                </h3>
-                <p className="mt-1 text-[10px] text-zinc-600">По дням, ₽</p>
-              </div>
-              <div className="flex h-[280px] flex-col rounded-2xl border border-white/[0.06] bg-[#111]/80 p-4">
-                {stats.series.length > 0 ? (
-                  <div className="flex h-full min-h-0 flex-1 items-end gap-1">
-                    {stats.series.map((row, i) => {
-                      const h = Math.max(6, Math.round((row.rewardRub / maxBar) * 100));
-                      const isPeak = i === peakIdx;
-                      return (
-                        <div
-                          key={row.day}
-                          className="group flex min-w-0 flex-1 flex-col items-center justify-end gap-2"
-                          title={`${row.day}: ${row.rewardRub} ₽`}
-                        >
-                          <div
-                            className={`w-full max-w-[28px] rounded-t transition ${
-                              isPeak
-                                ? "bg-gradient-to-t from-red-700 to-cb-flame shadow-[0_0_20px_rgba(255,49,49,0.35)]"
-                                : "bg-zinc-800 group-hover:bg-zinc-700"
-                            }`}
-                            style={{ height: `${h}%` }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex flex-1 items-center justify-center text-sm text-zinc-600">
-                    Нет данных за выбранный период
-                  </div>
-                )}
-                {stats.series.length > 0 ? (
-                  <div className="mt-3 flex justify-between gap-1 border-t border-white/[0.04] pt-2 text-[9px] text-zinc-600">
-                    {stats.series.map((row) => (
-                      <span key={row.day} className="min-w-0 flex-1 truncate text-center font-mono">
-                        {row.day.slice(5)}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {statsErr ? <p className="text-sm text-red-400">{statsErr}</p> : null}
       </div>
       ) : null}
 
       {tab === "material" ? (
-        <div className="space-y-4">
-          <div>
+        <div className="mx-auto w-full max-w-5xl space-y-10">
+          <div className="border-b border-white/[0.06] pb-6">
             <h1 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Материал</h1>
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 max-w-2xl text-sm text-zinc-500">
               Баннер и материалы для продвижения StormBattle — можно размещать на стримах и в соцсетях.
             </p>
           </div>
-          <PartnerMaterialBannerShare partnerPromoCode={materialPartnerPromoCode} />
-          <PartnerMaterialBanner partnerPromoCode={materialPartnerPromoCode} />
+
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Баннер для OBS и описания</h2>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                Горизонтальная карточка: логотип, оффер и переворот на промокод — вставьте ссылку ниже в источник «Браузер».
+              </p>
+            </div>
+            <PartnerMaterialBannerShare partnerPromoCode={materialPartnerPromoCode} />
+            <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c0c0c]/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4 md:p-5">
+              <PartnerMaterialBanner partnerPromoCode={materialPartnerPromoCode} />
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-white/[0.06] pt-10">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Широкий баннер · анимация</h2>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                Тексты сменяются по кругу — удобно как заголовок под стримом или в шапке поста.
+              </p>
+            </div>
+            <PartnerMaterialWideBannerShare partnerPromoCode={materialPartnerPromoCode} />
+            <div className="flex justify-center overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0c0c0c]/80 px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-5 sm:py-6">
+              <PartnerMaterialWideTitleBanner partnerPromoCode={materialPartnerPromoCode} />
+            </div>
+          </section>
         </div>
       ) : null}
 
-      {tab === "faq" ? <PartnerFaqAccordion /> : null}
+      {tab === "faq" ? <PartnerFaqAccordion showLevels={false} /> : null}
     </div>
   );
 }

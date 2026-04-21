@@ -81,8 +81,8 @@ export function PartnerMaterialBanner({ partnerPromoCode = null }: PartnerMateri
 
       <div className="relative z-10 grid grid-cols-1 gap-3 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:grid-cols-12 lg:items-center lg:gap-4 lg:px-5 lg:py-4">
         {/* Логотип + назва — зліва */}
-        <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-2.5 lg:col-span-3 lg:justify-start">
-          <div className="relative shrink-0">
+        <div className="flex flex-nowrap items-center justify-center gap-0 sm:gap-px lg:col-span-3 lg:justify-start">
+          <div className="relative -mr-1 shrink-0 sm:-mr-1.5 md:-mr-2">
             <div className="absolute inset-0 blur-lg">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                 <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" fill="#EF4444" />
@@ -121,7 +121,7 @@ export function PartnerMaterialBanner({ partnerPromoCode = null }: PartnerMateri
             </svg>
           </div>
 
-          <div className="min-w-0 text-center lg:text-left">
+          <div className="-ml-0.5 min-w-0 text-center sm:-ml-1 md:-ml-1.5 lg:text-left">
             <div className="flex flex-nowrap items-baseline justify-center gap-0 whitespace-nowrap leading-none lg:justify-start">
               <span className="text-3xl font-black tracking-tight text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)] sm:text-4xl lg:text-5xl">
                 Storm
@@ -172,7 +172,7 @@ export function PartnerMaterialBanner({ partnerPromoCode = null }: PartnerMateri
                   >
                     <PromoGradientCard fill>
                       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-                        <div className="w-full min-w-0 font-mono text-2xl font-black uppercase not-italic leading-none tracking-wide text-white drop-shadow-[0_4px_16px_rgba(0,0,0,1)] sm:text-3xl lg:text-4xl">
+                        <div className="w-full min-w-0 font-mono text-3xl font-black uppercase not-italic leading-none tracking-wide text-white drop-shadow-[0_4px_16px_rgba(0,0,0,1)] sm:text-4xl lg:text-5xl">
                           <span className="line-clamp-2 break-all">{promoCode.toUpperCase()}</span>
                         </div>
                         <div className="mt-2 text-sm font-bold uppercase leading-tight tracking-wider text-red-200/95 drop-shadow-md sm:text-base lg:text-lg">
