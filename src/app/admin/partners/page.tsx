@@ -211,9 +211,6 @@ function PartnerPromoEditRow({
 export default function AdminPartnersPage() {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [behaviorDraft, setBehaviorDraft] = useState<Record<string, PartnerBehavior>>({});
-  const [steamId, setSteamId] = useState("");
-  const [pct, setPct] = useState("5");
-  const [note, setNote] = useState("");
   const [promoByPartner, setPromoByPartner] = useState<
     Record<string, { code: string; label: string; depositBonusPercent: string }>
   >({});
@@ -234,26 +231,6 @@ export default function AdminPartnersPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function createPartner() {
-    setMsg(null);
-    const percentBps = Math.round(parseFloat(pct.replace(",", ".")) * 100);
-    const r = await apiFetch("/api/admin/partners", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        steamId: steamId.trim(),
-        percentBps,
-        internalNote: note.trim(),
-      }),
-    });
-    if (!r.ok) setMsg(r.error || "Ошибка");
-    else {
-      setMsg("Партнёр создан. Роль в профиле не меняется — доступ в кабинет по записи Partner.");
-      setSteamId("");
-      void load();
-    }
-  }
 
   function behaviorFor(p: PartnerRow): PartnerBehavior {
     return behaviorDraft[p._id] ?? defaultBehavior(p);

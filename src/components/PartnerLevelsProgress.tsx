@@ -93,7 +93,7 @@ export function PartnerLevelsProgress({
   const baseReferralsCount = Math.max(0, Math.floor(Number(initialReferralsCount) || 0));
   const currentLevel = levelFromReferrals(baseReferralsCount);
   const realPendingEarnedRub = Math.max(0, Math.floor(Number(pendingEarnedRub) || 0));
-  const displayEarnedRub = realPendingEarnedRub;
+  const displayEarnedRub = Math.max(realPendingEarnedRub, Math.floor(Number(totalEarnedRub) || 0));
   const displayPaidOutRub = Math.max(0, Math.floor(Number(totalPaidOutRub) || 0));
   const currentLevelBonusPercent =
     PARTNER_LEVEL_REWARDS.find((x) => x.level === currentLevel)?.repeatDepositBonusPercent || 15;
