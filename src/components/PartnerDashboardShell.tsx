@@ -7,8 +7,6 @@ import { apiFetch } from "@/lib/api";
 import { usePartnerCabinetTab } from "@/contexts/PartnerCabinetTabContext";
 import type { PartnerCabinetTab } from "@/contexts/PartnerCabinetTabContext";
 import { SiteMoney } from "@/components/SiteMoney";
-import { NavbarNotifications } from "@/components/NavbarNotifications";
-import { NavbarUserMenu } from "@/components/NavbarUserMenu";
 import { PartnerLevelHudOrb } from "@/components/PartnerLevelHudOrb";
 
 type Session = {
@@ -42,11 +40,14 @@ function DashboardIcon({ active }: { active?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={active ? "text-cb-flame" : "text-zinc-500"} aria-hidden>
       <path
-        d="M4 13h6V4H4v9zm10 0h6V4h-6v9zM4 20h6v-5H4v5zm10 0h6v-5h-6v5z"
+        d="M4.75 5.75h14.5a1 1 0 0 1 1 1v10.5a1 1 0 0 1-1 1H4.75a1 1 0 0 1-1-1V6.75a1 1 0 0 1 1-1Z"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
+      <circle cx="9" cy="11" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.8 15.6c.7-1.25 1.75-1.85 2.95-1.85s2.25.6 2.95 1.85" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M14.5 10h3.25M14.5 13h3.25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -86,7 +87,7 @@ function MaterialIcon({ active }: { active?: boolean }) {
 }
 
 const nav: { tab: PartnerCabinetTab; label: string; Icon: typeof DashboardIcon }[] = [
-  { tab: "analytics", label: "Аналитика", Icon: DashboardIcon },
+  { tab: "analytics", label: "Личный кабинет", Icon: DashboardIcon },
   { tab: "material", label: "Материал", Icon: MaterialIcon },
   { tab: "faq", label: "F.A.Q", Icon: FaqIcon },
 ];
@@ -146,8 +147,8 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
 
   return (
     <div className="flex min-h-[100dvh] w-full bg-[#0a0a0a] text-zinc-100">
-      <aside className="sticky top-0 flex h-[100dvh] w-[300px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0c0c0c]">
-        <div className="border-b border-white/[0.06] px-5 py-6">
+      <aside className="sticky top-0 flex h-[100dvh] w-[360px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0c0c0c]">
+        <div className="border-b border-white/[0.06] px-6 py-7">
           <Link
             href="/"
             className="flex items-center gap-4 outline-none transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500/50"
@@ -197,7 +198,14 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
               )}
             </div>
             <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-              <p className="truncate text-base font-semibold leading-tight text-white">{me.displayName}</p>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold leading-tight text-white">{me.displayName}</p>
+                <SiteMoney
+                  value={me.balance ?? 0}
+                  className="mt-1 text-sm font-bold text-zinc-200"
+                  iconClassName="h-4 w-4 text-cb-flame"
+                />
+              </div>
               <div className="shrink-0" title="Уровень партнёрской программы">
                 <PartnerLevelHudOrb level={me.partnerLevel ?? 1} compact />
               </div>
@@ -212,7 +220,7 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
           </div>
         )}
 
-        <nav className="flex flex-1 flex-col gap-1.5 px-4 py-5" aria-label="Разделы кабинета">
+        <nav className="flex flex-1 flex-col gap-2 px-5 py-6" aria-label="Разделы кабинета">
           {nav.map(({ tab: id, label, Icon }) => {
             const active = tab === id;
             return (
@@ -220,7 +228,7 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex w-full items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left text-base font-semibold leading-snug transition sm:gap-4 sm:py-4 ${
+                className={`flex w-full items-center gap-3.5 rounded-2xl px-5 py-4 text-left text-[1.05rem] font-semibold leading-snug transition sm:gap-4 sm:py-4.5 ${
                   active
                     ? "bg-cb-flame/12 text-white shadow-[inset_0_0_0_1px_rgba(255,49,49,0.35)]"
                     : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
@@ -235,18 +243,12 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
           })}
           <Link
             href="/"
-            className="mt-1 block rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-3 text-center text-sm font-semibold text-zinc-300 transition hover:border-cb-flame/30 hover:text-white"
+            className="mt-2 block rounded-xl border border-white/10 bg-zinc-900/80 px-5 py-3.5 text-center text-base font-semibold text-zinc-300 transition hover:border-cb-flame/30 hover:text-white"
           >
             Вернуться на сайт
           </Link>
         </nav>
-        <div className="mt-auto space-y-2 border-t border-white/[0.06] p-4">
-          <Link
-            href="/profile"
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-400 transition hover:bg-white/[0.04] hover:text-cb-flame"
-          >
-            Профиль и инвентарь
-          </Link>
+        <div className="mt-auto space-y-2 border-t border-white/[0.06] p-5">
           <Link
             href="/support"
             className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-zinc-500 transition hover:bg-white/[0.04] hover:text-zinc-300"
@@ -257,43 +259,30 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center justify-end gap-3 border-b border-white/[0.06] bg-[#0a0a0a]/95 px-4 py-3 backdrop-blur-md sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {me && (
-              <div className="hidden items-center gap-2 rounded-xl border border-white/[0.08] bg-black/40 px-2 py-1.5 sm:flex">
-                <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Баланс</span>
-                <SiteMoney
-                  value={me.balance ?? 0}
-                  className="text-sm font-bold text-white"
-                  iconClassName="h-4 w-4 text-cb-flame"
-                />
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event("cd-open-crypto-topup"))}
-                  className="rounded-lg border border-cb-flame/35 bg-cb-flame/10 px-2 py-1 text-[11px] font-bold text-cb-flame transition hover:bg-cb-flame/20"
-                >
-                  Пополнить
-                </button>
-              </div>
-            )}
-            <NavbarNotifications />
-            {me ? (
-              <NavbarUserMenu
-                me={{
-                  displayName: me.displayName,
-                  avatar: me.avatar || "",
-                  balance: me.balance ?? 0,
-                  isAdmin: me.isAdmin,
-                  isSupportStaff: me.isSupportStaff,
-                  isPartner: me.isPartner,
-                }}
-                variant="dashboard"
-              />
-            ) : null}
-          </div>
-        </header>
-
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 opacity-35"
+          style={{
+            backgroundImage: `
+              radial-gradient(ellipse at top, rgba(255,49,49,0.16), transparent 58%),
+              repeating-linear-gradient(
+                115deg,
+                rgba(255,70,70,0) 0px,
+                rgba(255,70,70,0) 36px,
+                rgba(255,80,80,0.14) 38px,
+                rgba(255,80,80,0) 42px
+              ),
+              repeating-linear-gradient(
+                -68deg,
+                rgba(255,120,120,0) 0px,
+                rgba(255,120,120,0) 52px,
+                rgba(255,140,140,0.1) 55px,
+                rgba(255,120,120,0) 59px
+              )
+            `,
+          }}
+        />
         <div
           className="flex gap-1.5 overflow-x-auto border-b border-white/[0.06] bg-[#0a0a0a] px-3 py-2.5 lg:hidden"
           role="tablist"
@@ -320,7 +309,7 @@ export function PartnerDashboardShell({ children }: { children: React.ReactNode 
           })}
         </div>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

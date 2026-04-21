@@ -8,7 +8,6 @@ import { PartnerMaterialBannerShare } from "@/components/PartnerMaterialBannerSh
 import { PartnerMaterialWideBannerShare } from "@/components/PartnerMaterialWideBannerShare";
 import { PartnerMaterialWideTitleBanner } from "@/components/PartnerMaterialWideTitleBanner";
 import { PartnerLevelsProgress } from "@/components/PartnerLevelsProgress";
-import { SiteMoney } from "@/components/SiteMoney";
 import { usePartnerCabinetTab } from "@/contexts/PartnerCabinetTabContext";
 
 type Dash = {
@@ -43,62 +42,20 @@ type Dash = {
   }[];
 };
 
-type PeriodStats = {
-  from: string | null;
-  to: string | null;
-  series: { day: string; rewardRub: number; netDepositRub: number; count: number }[];
-  totals: { rewardRub: number; netDepositRub: number; count: number };
-  earnings: Dash["earnings"];
-};
-
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-function daysAgo(n: number) {
-  const to = new Date();
-  const from = new Date(to);
-  from.setDate(from.getDate() - n);
-  return { from: ymd(from), to: ymd(to) };
-}
-
 export default function PartnerDashboardPage() {
   const { tab } = usePartnerCabinetTab();
   const [data, setData] = useState<Dash | null>(null);
-  const [period, setPeriod] = useState(() => daysAgo(30));
-  const [preset, setPreset] = useState<"7" | "30" | "90" | "all">("30");
-  const [statsErr, setStatsErr] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    let c = false;
-    void (async () => {
-      const r = await apiFetch<Dash>("/api/partner/me");
-      if (c) return;
-      if (!r.ok) setErr(r.error || "Ошибка загрузки");
-      else setData(r.data || null);
-    })();
-    return () => {
-      c = true;
-    };
-  }, []);
-
-  const loadStats = useCallback(async (from: string, to: string) => {
-    setStatsErr(null);
-    const qs = new URLSearchParams();
-    if (from) qs.set("from", from);
-    if (to) qs.set("to", to);
-    const q = qs.toString();
-    const r = await apiFetch<PeriodStats>(`/api/partner/stats${q ? `?${q}` : ""}`);
-    if (!r.ok) {
-      setStatsErr(r.error || "Не удалось загрузить статистику");
-      return;
-    }
+  const loadDashboard = useCallback(async () => {
+    const r = await apiFetch<Dash>("/api/partner/me");
+    if (!r.ok) setErr(r.error || "Ошибка загрузки");
+    else setData(r.data || null);
   }, []);
 
   useEffect(() => {
-    void loadStats(period.from, period.to);
-  }, [period.from, period.to, loadStats]);
+    void loadDashboard();
+  }, [loadDashboard]);
 
   /** Промокод для баннера «Материал»: перший активный или любой первый из списка. */
   const materialPartnerPromoCode = useMemo(() => {
@@ -107,15 +64,6 @@ export default function PartnerDashboardPage() {
     const raw = picked?.code?.trim();
     return raw && raw.length > 0 ? raw : null;
   }, [data?.codes]);
-
-  const onPreset = (v: "7" | "30" | "90" | "all") => {
-    setPreset(v);
-    if (v === "all") setPeriod({ from: "", to: "" });
-    else {
-      const n = v === "7" ? 7 : v === "30" ? 30 : 90;
-      setPeriod(daysAgo(n));
-    }
-  };
 
   if (err) {
     return <p className="text-red-400">{err}</p>;
@@ -129,84 +77,24 @@ export default function PartnerDashboardPage() {
   }
 
   const p = data.partner;
-  const shortId = p.id ? `#${String(p.id).slice(-6)}` : "—";
 
   return (
-    <div className="pb-8">
+    <div className="py-16">
       {tab === "analytics" ? (
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
-              Аналитика партнёра
-            </h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              Показатели в реальном времени · ID:{" "}
-              <span className="font-mono text-zinc-400">{shortId}</span>
-              {" · "}
-              уровень{" "}
-              <span className="font-mono text-zinc-300">{p.level ?? 1}</span>
-              {" · "}
-              ставка{" "}
-              <span className="font-mono text-cb-flame/95">{p.percentDisplay}%</span> от чистой базы депозита
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111] px-3 py-1.5 text-xs font-medium text-zinc-300">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-cb-flame shadow-[0_0_8px_rgba(255,49,49,0.8)]" />
-              Статус: активен
-            </span>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-600">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M8 3v4M16 3v4M3 11h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </span>
-              <select
-                value={preset}
-                onChange={(e) => onPreset(e.target.value as typeof preset)}
-                className="appearance-none rounded-xl border border-white/[0.1] bg-[#111] py-2.5 pl-10 pr-8 text-sm text-zinc-200 focus:border-cb-flame/40 focus:outline-none focus:ring-1 focus:ring-cb-flame/30"
-              >
-                <option value="7">Последние 7 дней</option>
-                <option value="30">Последние 30 дней</option>
-                <option value="90">Последние 90 дней</option>
-                <option value="all">За всё время</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <KpiCard
-            label="Зачислено на баланс"
-            sub="всего за период работы"
-            money
-            value={p.totalPaidOutRub}
-          />
-          <KpiCard label="Активации" sub="по реферальным кодам" value={p.usersActivated} highlight />
-          <KpiCard label="Депозитов" sub="количество" value={p.depositsCount} />
-          <KpiCard label="Оборот депозитов" sub="₽" money value={p.depositsVolumeRub} />
-          <KpiCard
-            label="Ожидает зачисления"
-            sub="после одобрения админа"
-            money
-            value={p.totalEarnedPendingRub}
-          />
-        </div>
-
         <PartnerLevelsProgress
           initialReferralsCount={Math.max(0, Math.floor(Number(p.usersActivated) || 0))}
-          totalEarnedRub={Math.max(0, Math.floor(Number(p.totalPaidOutRub) || 0))}
+          totalEarnedRub={Math.max(0, Math.floor(Number(p.totalEarnedPendingRub) || 0))}
+          pendingEarnedRub={Math.max(0, Math.floor(Number(p.totalEarnedPendingRub) || 0))}
+          totalPaidOutRub={Math.max(0, Math.floor(Number(p.totalPaidOutRub) || 0))}
           promoCodes={(data?.codes ?? []).map((c) => ({
             id: c.id,
             code: c.code,
             active: c.active,
             depositBonusPercent: c.depositBonusPercent,
           }))}
+          onBalanceClaimed={() => void loadDashboard()}
         />
-
-        {statsErr ? <p className="text-sm text-red-400">{statsErr}</p> : null}
       </div>
       ) : null}
 
@@ -248,40 +136,6 @@ export default function PartnerDashboardPage() {
       ) : null}
 
       {tab === "faq" ? <PartnerFaqAccordion showLevels={false} /> : null}
-    </div>
-  );
-}
-
-function KpiCard({
-  label,
-  sub,
-  value,
-  money,
-  highlight,
-}: {
-  label: string;
-  sub?: string;
-  value: number;
-  money?: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 transition ${
-        highlight
-          ? "border-cb-flame/50 bg-gradient-to-br from-cb-flame/[0.12] to-transparent shadow-[0_0_24px_rgba(255,49,49,0.12)]"
-          : "border-white/[0.06] bg-[#0c0c0c]"
-      }`}
-    >
-      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
-      {sub ? <p className="text-[9px] text-zinc-600">{sub}</p> : null}
-      <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">
-        {money ? (
-          <SiteMoney value={value} className="inline text-white" />
-        ) : (
-          value.toLocaleString("ru-RU")
-        )}
-      </p>
     </div>
   );
 }

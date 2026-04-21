@@ -5,45 +5,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { apiFetch } from "@/lib/api";
 import { normalizeHomeSlide, type HomeSlide } from "@/lib/slides";
 
-type FeaturedPromo = {
-  id: string;
-  code: string;
-  bonusPercent: number;
-  bannerSubline: string;
-  endsAt: string | null;
-  hasReward: boolean;
-  rewardType?: "balance" | "depositPct";
-  depositPercent?: number;
-};
-
-function formatCodeDisplay(code: string) {
-  const raw = code.replace(/[\s-]+/g, "").toUpperCase();
-  if (raw.length >= 10 && raw.length % 2 === 0) {
-    const mid = raw.length / 2;
-    return `${raw.slice(0, mid)}-${raw.slice(mid)}`;
-  }
-  return code;
-}
-
-function CopyIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M8 4.75A2.25 2.25 0 0 1 10.25 2.5h7A2.25 2.25 0 0 1 19.5 4.75v7a2.25 2.25 0 0 1-2.25 2.25H15v1.5A2.25 2.25 0 0 1 12.75 18h-7A2.25 2.25 0 0 1 3.5 15.75v-7A2.25 2.25 0 0 1 5.75 6.25H8v-1.5Zm1.5 0v1.5h3.75A2.25 2.25 0 0 1 15.5 8.5v3.75h1.5V4.75A.75.75 0 0 0 16.25 4h-7a.75.75 0 0 0-.75.75ZM5.75 7.75a.75.75 0 0 0-.75.75v7c0 .414.336.75.75.75h7a.75.75 0 0 0 .75-.75v-7a.75.75 0 0 0-.75-.75h-7Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function HeroCtaLink({
   href,
   className,
@@ -75,25 +36,6 @@ function HeroCtaLink({
   );
 }
 
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4Zm-2 6V6a2 2 0 1 1 4 0v2h-4Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 const DEFAULT_HERO = {
   title: "Бесплатный бонус на баланс",
   subtitle: "",
@@ -113,25 +55,8 @@ type Props = {
 
 export function PromoHeroBanner({ hero }: Props) {
   const heroCfg = { ...DEFAULT_HERO, ...(hero || {}) };
-  const [featured, setFeatured] = useState<FeaturedPromo | null>(null);
-  const [copied, setCopied] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [slides, setSlides] = useState<HomeSlide[]>([]);
-
-  const loadFeatured = useCallback(async () => {
-    const r = await apiFetch<{ promo: FeaturedPromo | null }>("/api/promo/featured");
-    if (r.ok) setFeatured(r.data?.promo ?? null);
-  }, []);
-
-  useEffect(() => {
-    loadFeatured();
-  }, [loadFeatured]);
-
-  useEffect(() => {
-    const h = () => loadFeatured();
-    window.addEventListener("cd-promos-updated", h);
-    return () => window.removeEventListener("cd-promos-updated", h);
-  }, [loadFeatured]);
 
   const loadSlides = useCallback(async () => {
     const r = await apiFetch<{ slides?: unknown[] }>("/api/slides");
@@ -162,17 +87,6 @@ export function PromoHeroBanner({ hero }: Props) {
       if (t) clearTimeout(t);
     };
   }, [loadSlides]);
-
-  const displayCode = featured?.code || "";
-  const depositPct = featured?.depositPercent ?? 0;
-  const bonusPct = featured?.bonusPercent ?? 0;
-
-  const isDepositPromo = featured?.rewardType === "depositPct" && depositPct > 0;
-  const pctForDeposit = isDepositPromo ? Math.round(depositPct) : 0;
-  const pctFallback = !isDepositPromo && bonusPct > 0 ? Math.round(bonusPct) : 0;
-  const pctShown = pctForDeposit > 0 ? pctForDeposit : pctFallback;
-  const promoHeadline =
-    pctShown > 0 ? `Бонус к депозиту ${pctShown}%` : "Бонус к депозиту";
 
   const slidesLen = slides.length;
   const slidesActive = slidesLen > 0;
@@ -228,17 +142,6 @@ export function PromoHeroBanner({ hero }: Props) {
     if (slidesLen <= 1) return;
     setCarouselIdx((i) => (i + 1) % slidesLen);
   }, [slidesLen]);
-
-  const copyCode = useCallback(async () => {
-    if (!displayCode) return;
-    try {
-      await navigator.clipboard.writeText(displayCode);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }, [displayCode]);
 
   return (
     <section className="relative px-4 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
@@ -380,68 +283,60 @@ export function PromoHeroBanner({ hero }: Props) {
 
           {/* Промокод + щоденний бонус (палітра cb-* як на сайті) */}
           <div className="flex min-h-0 flex-col gap-3 lg:h-full">
-            <div className="relative flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-cb-stroke/90 bg-cb-panel/95 bg-cb-mesh p-4 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,49,49,0.12),0_0_40px_-12px_rgba(255,49,49,0.12)] sm:rounded-[22px] sm:p-5">
-              <span
-                className="pointer-events-none absolute -right-1 top-1/2 -translate-y-1/2 select-none text-[5.5rem] font-black leading-none text-cb-flame/[0.07] sm:text-[6.5rem]"
-                aria-hidden
-              >
-                %
-              </span>
-
-              <div className="relative z-[1] flex flex-1 flex-col">
-                {displayCode ? (
-                  <>
-                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <h3 className="min-w-0 text-sm font-black uppercase leading-snug tracking-[0.1em] text-white sm:flex-1 sm:text-base sm:tracking-[0.12em] lg:text-lg">
-                        {promoHeadline}
-                      </h3>
-                      <div className="w-full max-w-[16rem] shrink-0 self-end rounded-xl border border-cb-flame/45 bg-gradient-to-b from-black/70 to-zinc-950/90 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_28px_-6px_rgba(255,49,49,0.28)] ring-1 ring-cb-flame/20 sm:w-auto sm:max-w-[min(100%,13rem)] sm:self-auto sm:px-3.5 sm:py-2.5 lg:max-w-[14rem]">
-                        <p
-                          className="select-all text-right font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,49,49,0.45)] sm:text-sm sm:tracking-[0.22em]"
-                          title={formatCodeDisplay(displayCode)}
-                        >
-                          {formatCodeDisplay(displayCode)}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void copyCode()}
-                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-900 to-cb-flame py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-[0_8px_24px_rgba(255,49,49,0.22)] transition hover:brightness-110 active:scale-[0.99] sm:py-3 sm:text-sm"
-                    >
-                      <CopyIcon className="h-4 w-4 shrink-0 opacity-95" />
-                      {copied ? "Скопировано" : "Скопировать"}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-black uppercase leading-snug tracking-[0.1em] text-white sm:text-base sm:tracking-[0.12em] lg:text-lg">
-                      {promoHeadline}
-                    </h3>
-                    <p className="mt-2 flex-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
-                      Главный промокод не назначен. Админ может включить «на баннер» в разделе промокодов.
-                    </p>
-                  </>
-                )}
+            <div className="relative flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-amber-200/35 bg-gradient-to-br from-[#ffb347] via-[#ff8c3a] to-[#e55d00] p-4 shadow-[0_20px_50px_-18px_rgba(0,0,0,0.9),0_0_0_1px_rgba(253,186,116,0.28),0_0_40px_-12px_rgba(249,115,22,0.4)] sm:rounded-[22px] sm:p-5">
+              <div className="relative z-[1] flex min-w-0 flex-1 items-center justify-between gap-3 sm:gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black uppercase tracking-[0.1em] text-white drop-shadow-[0_2px_10px_rgba(12,74,110,0.45)] sm:text-base lg:text-lg">
+                    Апгрейди свои скины!
+                  </h3>
+                  <Link
+                    href="/upgrade"
+                    className="mt-3 inline-flex min-h-[2.5rem] items-center justify-center rounded-xl border border-white/35 bg-white/20 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_24px_-12px_rgba(8,47,73,0.9)] transition hover:bg-white/30 sm:text-sm"
+                  >
+                    Апгрейд
+                  </Link>
+                </div>
+                <div className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local decorative asset */}
+                  <img
+                    src="/upgrade-card-rifle.png"
+                    alt="Скин для апгрейда"
+                    className="h-auto w-[156px] origin-center object-contain transition-transform duration-300 ease-out hover:scale-[1.2] sm:w-[212px]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
               </div>
             </div>
 
             <Link
               href="/profile"
-              className="group relative flex min-h-0 flex-col overflow-hidden rounded-[20px] border border-cb-stroke/85 bg-cb-panel/95 bg-cb-mesh p-4 shadow-[0_18px_44px_-16px_rgba(0,0,0,0.88),0_0_0_1px_rgba(255,49,49,0.1)] sm:rounded-[22px] sm:p-5"
+              className="group relative flex min-h-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-[#1d8a54] via-[#136b43] to-[#0b4f32] p-4 shadow-[0_18px_44px_-16px_rgba(0,0,0,0.88)] sm:rounded-[22px] sm:p-5"
             >
               <span
-                className="pointer-events-none absolute -bottom-8 -right-6 h-32 w-32 rounded-full bg-cb-flame/12 blur-3xl"
+                className="pointer-events-none absolute -bottom-10 -left-4 h-36 w-36 rounded-full bg-emerald-400/15 blur-3xl"
                 aria-hidden
               />
-              <h3 className="relative text-xs font-black uppercase tracking-[0.12em] text-white sm:text-[13px]">
-                Ежедневный бонус
-              </h3>
-              <p className="relative mt-1 text-xs font-medium text-cb-flame/90 sm:text-sm">Уже доступен!</p>
-              <span className="relative mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-gradient-to-r from-red-900 to-cb-flame py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-[0_8px_22px_rgba(255,49,49,0.2)] transition hover:brightness-110 sm:mt-4 sm:py-3 sm:text-sm">
-                <LockIcon className="h-4 w-4 shrink-0 opacity-95" />
-                Получить
-              </span>
+              <div className="relative z-[1] flex min-w-0 flex-1 items-center justify-between gap-3 sm:gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black uppercase tracking-[0.1em] text-white sm:text-[15px]">
+                    Выполняй миссии — забирай бонусы!
+                  </h3>
+                  <span className="mt-3 inline-flex min-h-[2.5rem] items-center justify-center rounded-xl border border-white/20 bg-white/15 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white transition group-hover:bg-white/25 sm:text-sm">
+                    ПЕРЕЙТИ
+                  </span>
+                </div>
+                <div className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local decorative asset */}
+                  <img
+                    src="/daily-bonus-chest.png"
+                    alt="Бонусный сундук"
+                    className="h-auto w-[96px] origin-center translate-y-4 scale-[1.75] object-contain transition-transform duration-300 ease-out group-hover:translate-y-4 group-hover:scale-[1.88] sm:w-[120px]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
             </Link>
           </div>
         </div>

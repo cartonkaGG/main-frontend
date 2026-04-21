@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { SiteMoney } from "@/components/SiteMoney";
 
@@ -70,6 +71,13 @@ type CabinetDash = {
     id: string;
     at: string;
     orderId: string;
+    userSub?: string;
+    user?: {
+      steamId: string | null;
+      displayName: string | null;
+      username: string | null;
+      avatar: string;
+    } | null;
     netDepositRub: number;
     percentBps: number;
     rewardRub: number;
@@ -209,6 +217,7 @@ export default function AdminPartnersPage() {
   const [promoByPartner, setPromoByPartner] = useState<
     Record<string, { code: string; label: string; depositBonusPercent: string }>
   >({});
+  const [pendingAdjustByPartner, setPendingAdjustByPartner] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [cabinetId, setCabinetId] = useState<string | null>(null);
   const [cabinetData, setCabinetData] = useState<CabinetDash | null>(null);
@@ -336,11 +345,53 @@ export default function AdminPartnersPage() {
     }
   }
 
+  async function adjustPendingBalance(partnerId: string) {
+    const raw = String(pendingAdjustByPartner[partnerId] ?? "").trim().replace(",", ".");
+    const amountRub = Math.floor(Number(raw) || 0);
+    if (!amountRub) {
+      setMsg("Укажите сумму изменения (например 500 или -300).");
+      return;
+    }
+    setMsg(null);
+    const r = await apiFetch<{ pendingRub?: number; appliedDeltaRub?: number }>(
+      `/api/admin/partners/${partnerId}/adjust-pending-balance`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountRub }),
+      }
+    );
+    if (!r.ok) {
+      setMsg(r.error || "Ошибка изменения баланса");
+      return;
+    }
+    const applied = Number(r.data?.appliedDeltaRub || 0);
+    const after = Number(r.data?.pendingRub || 0);
+    setMsg(`Баланс партнёрки изменён: ${applied >= 0 ? "+" : ""}${applied} ₽. Сейчас: ${after} ₽`);
+    setPendingAdjustByPartner((x) => ({ ...x, [partnerId]: "" }));
+    void load();
+  }
+
   async function deletePartner(partnerId: string, displayLabel: string) {
+    const partner = partners.find((x) => x._id === partnerId);
+    const requiredSteamId = String(partner?.steamId || "").trim();
+    if (!requiredSteamId) {
+      setMsg("У этого партнёра нет Steam ID — удаление через подтверждение недоступно.");
+      return;
+    }
     const ok = window.confirm(
       `Удалить партнёра «${displayLabel}»? Будут удалены промокоды, начисления и привязки рефералов. Роль пользователя станет обычной (user). Действие необратимо.`,
     );
     if (!ok) return;
+    const enteredSteamId = window.prompt(
+      `Для подтверждения введите Steam ID партнёра: ${requiredSteamId}`,
+      ""
+    );
+    if (enteredSteamId == null) return;
+    if (String(enteredSteamId).trim() !== requiredSteamId) {
+      setMsg("Steam ID не совпадает. Удаление отменено.");
+      return;
+    }
     setMsg(null);
     const r = await apiFetch(`/api/admin/partners/${partnerId}`, { method: "DELETE" });
     if (!r.ok) {
@@ -357,48 +408,9 @@ export default function AdminPartnersPage() {
 
   return (
     <div className="space-y-10 text-sm">
-      <div>
-        <h1 className="text-xl font-bold text-white">Партнёрская программа</h1>
-        <p className="mt-1 text-zinc-500">
-          Партнёр создаётся вручную по Steam ID. Процент — от чистой базы депозита (₽ без бонуса промокода сайта).
-          Начисления ждут одобрения администратора; на баланс сайта зачисляются только после нажатия «Зачислить на баланс».
-        </p>
-      </div>
-
       {msg ? (
         <p className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-emerald-200">{msg}</p>
       ) : null}
-
-      <section className="space-y-3 rounded-xl border border-cb-stroke/70 bg-black/30 p-4">
-        <h2 className="font-semibold text-white">Новый партнёр</h2>
-        <div className="flex flex-wrap gap-2">
-          <input
-            placeholder="Steam ID"
-            className="rounded border border-cb-stroke/80 bg-black/50 px-3 py-2 font-mono text-white"
-            value={steamId}
-            onChange={(e) => setSteamId(e.target.value)}
-          />
-          <input
-            placeholder="% (напр. 5)"
-            className="w-24 rounded border border-cb-stroke/80 bg-black/50 px-3 py-2 font-mono text-white"
-            value={pct}
-            onChange={(e) => setPct(e.target.value)}
-          />
-          <input
-            placeholder="Заметка"
-            className="min-w-[120px] flex-1 rounded border border-cb-stroke/80 bg-black/50 px-3 py-2 text-white"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-          <button
-            type="button"
-            onClick={() => void createPartner()}
-            className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-4 py-2 text-amber-200"
-          >
-            Создать
-          </button>
-        </div>
-      </section>
 
       <section className="space-y-4">
         <h2 className="font-semibold text-white">Партнёры</h2>
@@ -408,6 +420,7 @@ export default function AdminPartnersPage() {
           <div className="space-y-6">
             {partners.map((p) => {
               const b = behaviorFor(p);
+              const mainCode = (p.codes || []).find((c) => c.active)?.code || (p.codes || [])[0]?.code || "—";
               return (
                 <div
                   key={p._id}
@@ -449,19 +462,52 @@ export default function AdminPartnersPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    <span>
-                      %: <b className="text-white">{(p.percentBps / 100).toFixed(2)}%</b>
-                    </span>
-                    <span>активаций: {p.usersActivated ?? 0}</span>
-                    <span>ожидает зачисления: {p.totalEarnedPendingRub ?? 0} ₽</span>
-                    <span>зачислено на баланс (всего): {p.totalPaidOutRub ?? 0} ₽</span>
-                    {(p.totalEarnedConfirmedRub ?? 0) > 0 ? (
-                      <span className="text-zinc-600">устар. подтверждено: {p.totalEarnedConfirmedRub} ₽</span>
-                    ) : null}
+                  <div className="mt-3 grid gap-2 text-xs text-zinc-300 sm:grid-cols-3">
+                    <div className="rounded-lg border border-cb-stroke/40 bg-black/25 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">Промокод</p>
+                      <p className="mt-1 font-mono text-sm text-white">{mainCode}</p>
+                    </div>
+                    <div className="rounded-lg border border-cb-stroke/40 bg-black/25 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">Баланс партнёрки</p>
+                      <p className="mt-1 text-white">
+                        <SiteMoney value={Math.max(0, Math.floor(Number(p.totalEarnedPendingRub) || 0))} className="inline text-white" />
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-cb-stroke/40 bg-black/25 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-500">Рефералов</p>
+                      <p className="mt-1 font-semibold text-white">{Math.max(0, Math.floor(Number(p.usersActivated) || 0))}</p>
+                    </div>
                   </div>
 
-                  <div className="mt-4 space-y-3 rounded-lg border border-cb-stroke/50 bg-black/25 p-3">
+                  <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-cb-stroke/50 bg-black/25 p-3">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      Управление балансом (±)
+                      <input
+                        placeholder="например 500 или -200"
+                        className="mt-1 block w-44 rounded border border-cb-stroke/80 bg-black/50 px-2 py-1 font-mono text-sm text-white"
+                        value={pendingAdjustByPartner[p._id] ?? ""}
+                        onChange={(e) =>
+                          setPendingAdjustByPartner((x) => ({ ...x, [p._id]: e.target.value }))
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void adjustPendingBalance(p._id)}
+                      className="rounded border border-cb-flame/50 bg-cb-flame/15 px-3 py-2 text-xs text-cb-flame"
+                    >
+                      Применить
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void creditPartnerBalance(p._id)}
+                      className="rounded border border-emerald-700/50 bg-emerald-950/20 px-3 py-2 text-xs text-emerald-200"
+                    >
+                      Зачислить на баланс
+                    </button>
+                  </div>
+
+                  <div className="hidden mt-4 space-y-3 rounded-lg border border-cb-stroke/50 bg-black/25 p-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                       Настройки этого партнёра
                     </h3>
@@ -502,7 +548,7 @@ export default function AdminPartnersPage() {
                     </button>
                   </div>
 
-                  <div className="mt-3 space-y-2">
+                  <div className="hidden mt-3 space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                       Промокоды партнёра (в поле «промокод» при пополнении; бонус % к базе депозита)
                     </p>
@@ -577,7 +623,7 @@ export default function AdminPartnersPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-cb-stroke/40 pt-3">
+                  <div className="hidden mt-3 flex flex-wrap items-center gap-2 border-t border-cb-stroke/40 pt-3">
                     <button
                       type="button"
                       disabled={(p.totalEarnedPendingRub ?? 0) < 1}
@@ -670,26 +716,6 @@ function CabinetPreview({ data }: { data: CabinetDash }) {
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-cb-stroke/50 bg-black/30 p-3 text-xs text-zinc-400">
-        <p className="font-semibold text-zinc-300">Правила начислений (этот партнёр)</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
-          <li>Мин. сумма заказа (база ₽) для начисления: {p.minDepositRub} ₽</li>
-          <li>
-            Режим привязки:{" "}
-            {p.promoBindMode === "order"
-              ? "order — только ордера с указанным кодом"
-              : "user — после активации все депозиты этого аккаунта"}
-          </li>
-          <li>Выплата только на баланс сайта после одобрения администратором (без отыгрыша).</li>
-        </ul>
-      </div>
-
-      <div>
-        <p className="text-sm text-zinc-500">
-          Ставка: <span className="font-mono text-emerald-300">{p.percentDisplay}%</span> от чистого депозита.
-        </p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label="Активаций по коду" value={p.usersActivated} />
         <Stat label="Депозитов (счётчик)" value={p.depositsCount} />
@@ -736,6 +762,7 @@ function CabinetPreview({ data }: { data: CabinetDash }) {
             <thead className="border-b border-cb-stroke/60 bg-black/30 text-[10px] uppercase text-zinc-500">
               <tr>
                 <th className="px-3 py-2">Дата</th>
+                <th className="px-3 py-2">Пользователь</th>
                 <th className="px-3 py-2">Депозит (нетто ₽)</th>
                 <th className="px-3 py-2">%</th>
                 <th className="px-3 py-2">Начисление</th>
@@ -747,6 +774,20 @@ function CabinetPreview({ data }: { data: CabinetDash }) {
                 <tr key={e.id} className="border-b border-cb-stroke/40">
                   <td className="px-3 py-2 text-zinc-400">
                     {e.at ? new Date(e.at).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-zinc-300">
+                    {e.user?.steamId ? (
+                      <Link
+                        href={`/user/${encodeURIComponent(e.user.steamId)}`}
+                        target="_blank"
+                        className="inline-flex flex-col hover:text-white"
+                      >
+                        <span>{e.user.displayName || e.user.username || "Профиль"}</span>
+                        <span className="font-mono text-zinc-500">{e.user.steamId}</span>
+                      </Link>
+                    ) : (
+                      <span>{e.user?.displayName || e.user?.username || "Неизвестно"}</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 font-mono text-zinc-300">{e.netDepositRub}</td>
                   <td className="px-3 py-2">{(e.percentBps / 100).toFixed(2)}%</td>
